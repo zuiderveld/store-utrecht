@@ -1,8 +1,7 @@
 {
+  "name": "utrecht-status",
   "private": true,
-  "name": "utrecht-store",
-  "description": "Utrecht Roleplay — aparte coin store (website + API + FiveM bridge)",
   "dependencies": {
-    "@vercel/blob": "^0.27.3"
+    "@vercel/blob": "^0.27.0"
   }
 }

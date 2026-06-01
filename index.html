@@ -2,64 +2,177 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Utrecht Roleplay | Store</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="URP Store — koop voertuigen en items met coins.">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/store.css">
+    <title>URP Status</title>
+    <meta name="description" content="Live status Utrecht Roleplay — FiveM server en websites.">
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/css/status.css?v=4">
+    <style>
+        /* FiveM hero — altijd laden (ook als fivem-panel.css mist op Vercel) */
+        .fivem-hero { margin-bottom: 1.75rem; }
+        .fivem-hero .fivem-panel {
+            padding: 1.4rem 1.55rem 1.3rem;
+            border-radius: 20px;
+            background: #0b0e11;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+        .fivem-hero .fivem-panel-top {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 1.2rem;
+        }
+        .fivem-hero .fivem-panel-status {
+            display: flex; align-items: center; gap: 0.45rem;
+            font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em; color: #4ade80;
+        }
+        .fivem-hero .fivem-panel-status i { font-size: 1rem; color: #4ade80; }
+        .fivem-hero .fivem-status-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: #4ade80;
+            box-shadow: 0 0 10px rgba(74, 222, 128, 0.7);
+        }
+        .fivem-hero .fivem-panel-status--off { color: #f87171; }
+        .fivem-hero .fivem-panel-status--off i { color: #f87171; }
+        .fivem-hero .fivem-signal { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+        .fivem-hero .fivem-signal-bar {
+            width: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.1);
+        }
+        .fivem-hero .fivem-signal-bar:nth-child(1) { height: 5px; }
+        .fivem-hero .fivem-signal-bar:nth-child(2) { height: 8px; }
+        .fivem-hero .fivem-signal-bar:nth-child(3) { height: 11px; }
+        .fivem-hero .fivem-signal-bar:nth-child(4) { height: 14px; }
+        .fivem-hero .fivem-signal-bar:nth-child(5) { height: 18px; }
+        .fivem-hero .fivem-signal-bar.is-lit { background: rgba(74, 222, 128, 0.5); }
+        .fivem-hero .fivem-panel-count {
+            display: flex; align-items: baseline; gap: 0.1rem; line-height: 1; margin-bottom: 0.4rem;
+        }
+        .fivem-hero .fivem-count-current {
+            font-size: 3.6rem; font-weight: 800; color: #fff; letter-spacing: -0.03em;
+        }
+        .fivem-hero .fivem-count-sep {
+            font-size: 2.15rem; font-weight: 600; color: rgba(255, 255, 255, 0.32); margin: 0 0.1rem;
+        }
+        .fivem-hero .fivem-count-max { font-size: 2.15rem; font-weight: 600; color: #6b7280; }
+        .fivem-hero .fivem-panel-label {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.88rem; color: #6b7280; margin: 0 0 1.05rem;
+        }
+        .fivem-hero .fivem-bar-track {
+            height: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); overflow: hidden;
+        }
+        .fivem-hero .fivem-bar-fill {
+            height: 100%; border-radius: 999px;
+            background: linear-gradient(90deg, #15803d, #22c55e, #4ade80);
+            box-shadow: 0 0 12px rgba(74, 222, 128, 0.4);
+            transition: width 0.5s ease;
+        }
+        .fivem-hero .fivem-bar-scale {
+            display: flex; justify-content: space-between;
+            font-size: 0.72rem; color: #6b7280; margin-top: 0.4rem;
+        }
+        .fivem-hero .fivem-offline-detail { color: #9ca3af; margin: 0.5rem 0 0; }
+        .fivem-hero-foot {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 0.85rem;
+        }
+        .fivem-hero-connect {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.55rem 1.1rem; border-radius: 999px;
+            background: linear-gradient(135deg, #5865f2, #8b5cf6);
+            color: #fff; font-size: 0.85rem; font-weight: 700; text-decoration: none;
+        }
+        .fivem-hero-details {
+            margin-top: 0.75rem; font-size: 0.78rem; color: #6b7280;
+        }
+        .fivem-hero-details summary { cursor: pointer; color: #a78bfa; }
+        .fivem-hero .fivem-player-list {
+            list-style: none; margin: 0.5rem 0 0; padding: 0;
+            border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(0,0,0,0.35); max-height: 140px; overflow-y: auto;
+        }
+        .fivem-hero .fivem-player {
+            display: flex; justify-content: space-between; padding: 0.45rem 0.7rem;
+            font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .fivem-hero .fivem-player-name { color: #eef2ff; }
+        .fivem-hero .fivem-player-ping { color: #6b7280; font-size: 0.75rem; }
+        .build-tag {
+            margin-top: 0.5rem; font-size: 0.72rem; color: #4ade80;
+            background: rgba(74, 222, 128, 0.1); padding: 0.25rem 0.6rem; border-radius: 8px;
+        }
+        .build-tag code { color: #86efac; }
+        /* Oude FiveM-layout verbergen als oude JS/CSS nog cached is */
+        .fivem-block-head, .fivem-showcase, .fivem-players-count { display: none !important; }
+    </style>
 </head>
 <body>
-<div class="bg-overlay"></div>
+<div class="status-bg"></div>
+<div class="status-wrap">
+    <header class="status-header">
+        <img src="/assets/favicon.png" alt="Utrecht Roleplay">
+        <h1>URP <span>Status</span></h1>
+        <p>Live FiveM-server en website-status</p>
+        <p class="build-tag">UI build 5 — zie je dit niet? Upload <code>index.html</code> opnieuw op GitHub.</p>
+    </header>
 
-<header class="topbar">
-    <div class="brand">
-        <img src="assets/images/logo.png" class="logo" alt="Utrecht Roleplay">
-        <span>Utrecht Roleplay Store</span>
-    </div>
-    <nav class="nav">
-        <a href="index.html" class="active">Store</a>
-        <a href="https://www.utrechtroleplay.eu/" target="_blank" rel="noopener">Website</a>
-        <a href="admin.html" id="navAdmin" style="display:none">Beheer</a>
-    </nav>
-    <div class="nav-buttons">
-        <button type="button" class="btn-outline" id="btnLogin">Discord login</button>
-        <button type="button" class="btn-main" id="btnLogout" style="display:none">Uitloggen</button>
-    </div>
-</header>
+    <div id="statusError" class="status-error-box" role="alert"></div>
 
-<section class="store-hero">
-    <h1>URP Store</h1>
-    <p>Koop voertuigen en items met coins. Log in met Discord, koppel je FiveM-account in-game, en je aankopen komen automatisch in je garage.</p>
-    <div class="store-userbar" id="userBar" style="display:none">
-        <div class="store-coins">Coins: <span id="coinBalance">0</span></div>
-        <span id="userName"></span>
-        <button type="button" class="btn-outline" id="btnLinkFivem">Koppel FiveM</button>
-    </div>
-</section>
+    <!-- FiveM = hoofdkaart zoals referentie -->
+    <section id="fivemSection" class="fivem-hero" hidden>
+        <div id="fivemCard"></div>
+    </section>
 
-<div class="store-link-box" id="linkBox" style="display:none">
-    <p><strong>In-game commando:</strong></p>
-    <p><code id="linkCode">------</code></p>
-    <p style="margin-top:8px;font-size:0.9rem;color:rgba(234,240,255,.7)">Code is 10 minuten geldig. Typ het commando op de URP-server.</p>
+    <div id="statusBanner" class="status-banner loading">
+        <span class="status-dot-lg" aria-hidden="true"></span>
+        <div class="status-banner-text">
+            <strong id="bannerTitle">Status laden…</strong>
+            <span id="bannerSub">Even geduld.</span>
+            <span id="lastChecked" style="display:block;margin-top:0.35rem;font-size:0.8rem;color:#6b7280"></span>
+        </div>
+    </div>
+
+    <div class="status-section">
+        <h2 class="status-section-title"><i class="fas fa-globe"></i> Websites</h2>
+        <div id="statusList" class="status-list">
+            <p class="status-footer">Laden…</p>
+        </div>
+    </div>
+
+    <footer class="status-footer">
+        Vernieuwt elke 60 seconden ·
+        <a href="https://www.utrechtroleplay.eu">Utrecht Roleplay</a>
+    </footer>
 </div>
-
-<div class="store-layout">
-    <aside class="store-sidebar">
-        <h3>Categorieën</h3>
-        <div id="categoryList"></div>
-    </aside>
-    <main>
-        <div class="store-grid" id="productGrid"></div>
-        <p id="emptyMsg" style="display:none;color:rgba(234,240,255,.5);text-align:center;padding:40px">Geen producten in deze categorie.</p>
-    </main>
-</div>
-
-<div class="store-toast" id="toast"></div>
-<footer class="footer">© 2026 Utrecht Roleplay — Store</footer>
-
-<script src="js/store-config.js"></script>
-<script src="assets/js/store-auth.js"></script>
-<script src="assets/js/store.js"></script>
+<script src="/js/status.js?v=5"></script>
+<script>
+/* Fallback: als externe JS oud/cached is, forceer nieuwe FiveM-kaart */
+(function () {
+    var orig = window.renderFivem;
+    if (typeof orig !== 'function') return;
+    window.renderFivem = function (fivem) {
+        orig(fivem);
+        var card = document.getElementById('fivemCard');
+        if (!card || !fivem || !fivem.enabled) return;
+        if (card.querySelector('.fivem-count-current')) return;
+        var s = fivem.status === 'up';
+        var c = fivem.clients || 0;
+        var m = fivem.maxClients || 128;
+        var pct = Math.min(100, (c / m) * 100);
+        var fill = 'width:' + pct + '%' + (c > 0 && pct < 2 ? ';min-width:8px' : '');
+        var bars = '';
+        for (var i = 1; i <= 5; i++) bars += '<span class="fivem-signal-bar' + (s && i <= Math.max(1, Math.ceil(pct / 20)) ? ' is-lit' : '') + '"></span>';
+        card.innerHTML =
+            '<div class="fivem-hero-card" data-ui="fivem-v5">' +
+            '<div class="fivem-panel fivem-panel--' + (s ? 'online' : 'offline') + '">' +
+            '<div class="fivem-panel-top"><div class="fivem-panel-status' + (s ? '' : ' fivem-panel-status--off') + '">' +
+            '<i class="fas fa-wifi"></i><span class="fivem-status-dot"></span><span class="fivem-status-text">' + (s ? 'ONLINE' : 'OFFLINE') + '</span></div>' +
+            '<div class="fivem-signal">' + bars + '</div></div>' +
+            (s ? '<div class="fivem-panel-count"><span class="fivem-count-current">' + c + '</span><span class="fivem-count-sep">/</span><span class="fivem-count-max">' + m + '</span></div>' +
+            '<p class="fivem-panel-label"><i class="fas fa-users"></i> Spelers online</p>' +
+            '<div class="fivem-bar-block"><div class="fivem-bar-track"><div class="fivem-bar-fill" style="' + fill + '"></div></div>' +
+            '<div class="fivem-bar-scale"><span>0</span><span>' + m + '</span></div></div>' : '<p class="fivem-offline-detail">' + (fivem.error || 'Offline') + '</p>') +
+            '</div><div class="fivem-hero-foot"><a class="fivem-hero-connect" href="' + (fivem.connectUrl || '#') + '"><i class="fas fa-play"></i> Verbinden in FiveM</a></div></div>';
+    };
+})();
+</script>
 </body>
 </html>
