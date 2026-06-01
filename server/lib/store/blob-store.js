@@ -1,3 +1,5 @@
+const { head, put } = require('@vercel/blob');
+
 const BLOB_PATH = 'store/state.json';
 
 const DEFAULT_STATE = {
@@ -28,7 +30,6 @@ const DEFAULT_STATE = {
 
 async function readBlob() {
   try {
-    const { head } = require('@vercel/blob');
     const meta = await head(BLOB_PATH);
     if (!meta?.url) return null;
     const res = await fetch(meta.url);
@@ -40,7 +41,6 @@ async function readBlob() {
 }
 
 async function writeBlob(state) {
-  const { put } = require('@vercel/blob');
   await put(BLOB_PATH, JSON.stringify(state), {
     access: 'public',
     addRandomSuffix: false,

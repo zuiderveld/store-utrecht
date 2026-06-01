@@ -1,5 +1,14 @@
 {
   "installCommand": "npm install",
-  "buildCommand": null,
-  "outputDirectory": "."
+  "buildCommand": "node scripts/vercel-prep.js",
+  "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/api/health", "destination": "/api/router?route=health" },
+    { "source": "/api/store-auth", "destination": "/api/router?route=store-auth" },
+    { "source": "/api/store", "destination": "/api/router?route=store" },
+    { "source": "/api/store-link", "destination": "/api/router?route=store-link" },
+    { "source": "/api/store-purchase", "destination": "/api/router?route=store-purchase" },
+    { "source": "/api/store-admin", "destination": "/api/router?route=store-admin" },
+    { "source": "/api/store-bridge", "destination": "/api/router?route=store-bridge" }
+  ]
 }

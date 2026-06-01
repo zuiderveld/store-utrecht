@@ -5,7 +5,10 @@
 - **Add New Project** → map `utrecht-store` (eigen GitHub-repo: `utrecht-store`)
 - Root Directory: leeg
 - Install: `npm install`
+- Build: `node scripts/vercel-prep.js` (staat in `vercel.json`)
 - Output: `.`
+
+**Belangrijk:** upload/deploy altijd met **`package.json`** + **`package-lock.json`** in de root (niet alleen HTML). Anders mist `@vercel/blob` en krijg je `Cannot find module '@vercel/blob'`.
 
 ## 2. Domein
 
