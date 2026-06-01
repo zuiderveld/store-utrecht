@@ -1,0 +1,38 @@
+# Deploy utrecht-store (apart Vercel-project)
+
+## 1. Vercel
+
+- **Add New Project** → map `utrecht-store` (eigen GitHub-repo: `utrecht-store`)
+- Root Directory: leeg
+- Install: `npm install`
+- Output: `.`
+
+## 2. Domein
+
+Bijv. `store.utrechtroleplay.eu` → koppel aan dit project (niet aan de main site).
+
+## 3. Environment Variables
+
+Zie `.env.example` — alle store-variabelen horen **hier**, niet op de main website.
+
+## 4. Discord OAuth redirects
+
+- `https://store.utrechtroleplay.eu/`
+- `https://store.utrechtroleplay.eu/admin.html`
+
+## 5. FiveM
+
+`fivem-resources/utrp_store/config.lua`:
+
+```lua
+Config.ApiUrl = 'https://store.utrechtroleplay.eu'
+Config.ApiKey = '<zelfde als STORE_BRIDGE_API_KEY>'
+```
+
+## 6. Test
+
+`https://store.utrechtroleplay.eu/api/health` → `{"ok":true,"store":true}`
+
+## Logo
+
+Kopieer `logo.png` en `favicon.png` naar `assets/images/` en `assets/` (van main site `utrecht-roleplay-main/assets/`).

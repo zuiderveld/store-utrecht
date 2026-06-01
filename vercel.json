@@ -1,0 +1,14 @@
+{
+  "installCommand": "npm install",
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "functions": {
+    "api/store-auth.js": {},
+    "api/store.js": {},
+    "api/store-link.js": {},
+    "api/store-purchase.js": {},
+    "api/store-admin.js": {},
+    "api/store-bridge.js": {},
+    "api/health.js": {}
+  }
+}

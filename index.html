@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Utrecht Roleplay | Store</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="URP Store — koop voertuigen en items met coins.">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body>
+<div class="bg-overlay"></div>
+
+<header class="topbar">
+    <div class="brand">
+        <img src="assets/images/logo.png" class="logo" alt="Utrecht Roleplay">
+        <span>Utrecht Roleplay Store</span>
+    </div>
+    <nav class="nav">
+        <a href="index.html" class="active">Store</a>
+        <a href="https://www.utrechtroleplay.eu/" target="_blank" rel="noopener">Website</a>
+        <a href="admin.html" id="navAdmin" style="display:none">Beheer</a>
+    </nav>
+    <div class="nav-buttons">
+        <button type="button" class="btn-outline" id="btnLogin">Discord login</button>
+        <button type="button" class="btn-main" id="btnLogout" style="display:none">Uitloggen</button>
+    </div>
+</header>
+
+<section class="store-hero">
+    <h1>URP Store</h1>
+    <p>Koop voertuigen en items met coins. Log in met Discord, koppel je FiveM-account in-game, en je aankopen komen automatisch in je garage.</p>
+    <div class="store-userbar" id="userBar" style="display:none">
+        <div class="store-coins">Coins: <span id="coinBalance">0</span></div>
+        <span id="userName"></span>
+        <button type="button" class="btn-outline" id="btnLinkFivem">Koppel FiveM</button>
+    </div>
+</section>
+
+<div class="store-link-box" id="linkBox" style="display:none">
+    <p><strong>In-game commando:</strong></p>
+    <p><code id="linkCode">------</code></p>
+    <p style="margin-top:8px;font-size:0.9rem;color:rgba(234,240,255,.7)">Code is 10 minuten geldig. Typ het commando op de URP-server.</p>
+</div>
+
+<div class="store-layout">
+    <aside class="store-sidebar">
+        <h3>Categorieën</h3>
+        <div id="categoryList"></div>
+    </aside>
+    <main>
+        <div class="store-grid" id="productGrid"></div>
+        <p id="emptyMsg" style="display:none;color:rgba(234,240,255,.5);text-align:center;padding:40px">Geen producten in deze categorie.</p>
+    </main>
+</div>
+
+<div class="store-toast" id="toast"></div>
+<footer class="footer">© 2026 Utrecht Roleplay — Store</footer>
+
+<script src="js/store-config.js"></script>
+<script src="assets/js/store-auth.js"></script>
+<script src="assets/js/store.js"></script>
+</body>
+</html>
