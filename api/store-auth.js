@@ -1,6 +1,7 @@
 const { cors, json, readBody } = require('../server/lib/store/http');
-const { exchangeCode, fetchDiscordUser, getGuildMember, isAdmin } = require('../server/lib/store/discord-store');
-const { createSession } = require('../server/lib/store/session');
+const { exchangeCode, verifyStoreMember } = require('../server/lib/store/discord-store');
+const { upsertUserFromDiscord } = require('../server/lib/store/session');
+const { getState } = require('../server/lib/store/blob-store');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -17,28 +18,22 @@ module.exports = async function handler(req, res) {
     }
     if (!accessToken) return json(res, 400, { error: 'Geen Discord code of token' });
 
-    const discordUser = await fetchDiscordUser(accessToken);
-    const member = await getGuildMember(discordUser.id);
-    const roles = member?.roles || [];
-    const admin = isAdmin(roles);
+    const discord = await verifyStoreMember(accessToken);
+    await upsertUserFromDiscord(discord);
 
-    const token = await createSession(discordUser, { isAdmin: admin });
-
-    const { getState } = require('../server/lib/store/blob-store');
     const state = await getState();
-    const user = state.users[discordUser.id] || {};
+    const user = state.users[discord.discordId] || {};
 
     return json(res, 200, {
-      token,
-      user: {
-        discordId: discordUser.id,
-        username: user.globalName || user.username || discordUser.username,
-        avatar: discordUser.avatar,
-        coins: user.coins || 0,
-        license: user.license || null,
-        linked: Boolean(user.license),
-        isAdmin: admin,
-      },
+      username: discord.username,
+      discordUsername: discord.discordUsername,
+      discordId: discord.discordId,
+      avatarUrl: discord.avatarUrl,
+      accessToken: discord.accessToken,
+      isAdmin: discord.isAdmin,
+      coins: user.coins || 0,
+      license: user.license || null,
+      linked: Boolean(user.license),
     });
   } catch (err) {
     console.error('store-auth:', err);

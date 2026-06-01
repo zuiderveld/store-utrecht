@@ -1,6 +1,6 @@
 const { cors, json } = require('../server/lib/store/http');
 const { getState } = require('../server/lib/store/blob-store');
-const { resolveSession } = require('../server/lib/store/session');
+const { resolveDiscord } = require('../server/lib/store/session');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
       }));
 
     let me = null;
-    const ctx = await resolveSession(req.headers.authorization);
+    const ctx = await resolveDiscord(req.headers.authorization);
     if (ctx) {
       me = {
         discordId: ctx.user.discordId,
@@ -31,7 +31,9 @@ module.exports = async function handler(req, res) {
         coins: ctx.user.coins || 0,
         license: ctx.user.license || null,
         linked: Boolean(ctx.user.license),
-        isAdmin: Boolean(ctx.session.isAdmin),
+        discordLoggedIn: true,
+        fivemLinked: Boolean(ctx.user.license),
+        isAdmin: Boolean(ctx.isAdmin),
       };
     }
 

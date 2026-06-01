@@ -1,27 +1,27 @@
-/** Publieke store-config — apart project (store.utrechtroleplay.eu) */
+/** Zelfde Discord OAuth-app als staff-portaal */
+const SITE_API = window.location.origin;
+const DISCORD_CLIENT_ID = '1105558581304098867';
+
 window.STORE_CONFIG = {
   storeUrl: 'https://store.utrechtroleplay.eu',
-  apiBase: window.location.origin,
-  discordClientId: '1105558581304098867',
+  apiBase: SITE_API,
+  discordClientId: DISCORD_CLIENT_ID,
   mainSiteUrl: 'https://www.utrechtroleplay.eu/',
-  storePath: '/',
-  adminPath: '/admin.html',
 };
 
-window.storeRedirectUri = function () {
-  return window.location.origin + window.STORE_CONFIG.storePath;
-};
+function discordRedirectUri() {
+  return window.location.origin + window.location.pathname;
+}
 
-window.storeAdminRedirectUri = function () {
-  return window.location.origin + window.STORE_CONFIG.adminPath;
-};
+window.storeRedirectUri = discordRedirectUri;
+window.storeAdminRedirectUri = discordRedirectUri;
 
 window.getStoreDiscordAuthUrl = function (redirectUri) {
   const params = new URLSearchParams({
-    client_id: window.STORE_CONFIG.discordClientId,
-    redirect_uri: redirectUri,
+    client_id: DISCORD_CLIENT_ID,
+    redirect_uri: redirectUri || discordRedirectUri(),
     response_type: 'code',
-    scope: 'identify',
+    scope: 'identify guilds',
   });
   return 'https://discord.com/api/oauth2/authorize?' + params.toString();
 };

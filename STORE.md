@@ -18,19 +18,26 @@ Voeg redirect URIs toe voor je OAuth-app:
 - `https://store.utrechtroleplay.eu/admin.html`
 - (lokaal) `http://localhost:3000/` en `http://localhost:3000/admin.html`
 
-Scopes: `identify`
+Scopes: `identify guilds` (zelfde als staff-portaal)
 
 ## Vercel Environment Variables
+
+**Gebruik dezelfde waarden als het staff-portaal** (`DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`).
 
 | Variabele | Verplicht | Beschrijving |
 |-----------|-----------|--------------|
 | `BLOB_READ_WRITE_TOKEN` | Ja | Opslag catalogus, users, orders |
-| `DISCORD_CLIENT_SECRET` | Ja | OAuth code exchange |
-| `DISCORD_BOT_TOKEN` | Ja | Guild member + admin rollen |
-| `DISCORD_GUILD_ID` | Ja | URP Discord server |
-| `DISCORD_STORE_CLIENT_ID` | Nee | Aparte OAuth app; anders staff client id in config |
-| `DISCORD_STORE_ADMIN_ROLES` | Ja | Comma-separated role IDs voor `/store/admin.html` |
+| `DISCORD_CLIENT_SECRET` | Ja | Zelfde als staff |
+| `DISCORD_BOT_TOKEN` | Ja | Zelfde als staff |
+| `DISCORD_GUILD_ID` | Ja | Zelfde als staff |
+| `DISCORD_STORE_ADMIN_ROLES` | Nee | Store-beheer; leeg = Founder/Co-Founder rollen |
 | `STORE_BRIDGE_API_KEY` | Ja | Zelfde als FiveM `config.lua` |
+
+## Inloggen
+
+- **Discord:** authorization code flow, `accessToken` in `sessionStorage` (zoals `urpStaffAccessToken`)
+- **FiveM:** `/koppelstore CODE` in-game — verplicht voor **coins gebruiken** (kopen)
+- Catalogus bekijken kan zonder login; kopen vereist **Discord + FiveM gekoppeld**
 
 Optioneel: `GRP_BRIDGE_API_KEY` als alias voor de bridge key.
 

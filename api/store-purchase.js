@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { cors, json, readBody } = require('../server/lib/store/http');
-const { resolveSession } = require('../server/lib/store/session');
+const { requireDiscordAndFivem } = require('../server/lib/store/session');
 const { saveState } = require('../server/lib/store/blob-store');
 
 module.exports = async function handler(req, res) {
@@ -9,11 +9,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Alleen POST' });
 
   try {
-    const ctx = await resolveSession(req.headers.authorization);
-    if (!ctx) return json(res, 401, { error: 'Log eerst in met Discord' });
-    if (!ctx.user.license) {
-      return json(res, 400, { error: 'Koppel eerst je FiveM account (/koppelstore in-game)' });
-    }
+    const ctx = await requireDiscordAndFivem(req.headers.authorization);
 
     const body = await readBody(req);
     const productId = body.productId;
@@ -65,6 +61,8 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     console.error('store-purchase:', err);
-    return json(res, 400, { error: err.message || 'Aankoop mislukt' });
+    const msg = err.message || 'Aankoop mislukt';
+    const code = /log|discord|fivem|koppel/i.test(msg) ? 401 : 400;
+    return json(res, code, { error: msg });
   }
 };

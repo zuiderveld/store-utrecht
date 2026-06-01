@@ -13,7 +13,7 @@ Bijv. `store.utrechtroleplay.eu` → koppel aan dit project (niet aan de main si
 
 ## 3. Environment Variables
 
-Zie `.env.example` — alle store-variabelen horen **hier**, niet op de main website.
+Zie `.env.example` — kopieer **`DISCORD_CLIENT_SECRET`**, **`DISCORD_BOT_TOKEN`** en **`DISCORD_GUILD_ID`** van het staff-portaal (zelfde Discord-app).
 
 ## 4. Discord OAuth redirects
 

@@ -1,5 +1,5 @@
 const { cors, json, readBody } = require('../server/lib/store/http');
-const { resolveSession } = require('../server/lib/store/session');
+const { requireDiscord } = require('../server/lib/store/session');
 const { createLinkCode } = require('../server/lib/store/discord-store');
 const { saveState } = require('../server/lib/store/blob-store');
 
@@ -11,8 +11,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Alleen POST' });
 
   try {
-    const ctx = await resolveSession(req.headers.authorization);
-    if (!ctx) return json(res, 401, { error: 'Log eerst in met Discord' });
+    const ctx = await requireDiscord(req.headers.authorization);
 
     const code = createLinkCode();
     const expiresAt = Date.now() + CODE_TTL_MS;
@@ -32,6 +31,8 @@ module.exports = async function handler(req, res) {
     });
   } catch (err) {
     console.error('store-link:', err);
-    return json(res, 500, { error: err.message || 'Koppelcode mislukt' });
+    const msg = err.message || 'Koppelcode mislukt';
+    const code = /log|discord/i.test(msg) ? 401 : 400;
+    return json(res, code, { error: msg });
   }
 };

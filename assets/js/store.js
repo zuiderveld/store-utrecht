@@ -23,13 +23,21 @@
 
   function updateAuthUI() {
     const me = catalog.me;
-    const logged = Boolean(getStoreToken() && me);
-    btnLogin.style.display = logged ? 'none' : 'inline-flex';
-    btnLogout.style.display = logged ? 'inline-flex' : 'none';
-    userBar.style.display = logged ? 'flex' : 'none';
-    if (logged) {
+    const discordIn = isStoreLoggedIn();
+    const fivemIn = me?.linked || isStoreFivemLinked();
+
+    btnLogin.style.display = discordIn ? 'none' : 'inline-flex';
+    btnLogout.style.display = discordIn ? 'inline-flex' : 'none';
+    userBar.style.display = discordIn ? 'flex' : 'none';
+
+    if (discordIn && me) {
       coinEl.textContent = me.coins ?? 0;
-      userName.textContent = me.username + (me.linked ? ' · FiveM gekoppeld' : ' · FiveM niet gekoppeld');
+      sessionStorage.setItem('urpStoreCoins', String(me.coins ?? 0));
+      sessionStorage.setItem('urpStoreFivemLinked', fivemIn ? 'true' : 'false');
+      let status = 'Discord ✓';
+      status += fivemIn ? ' · FiveM ✓' : ' · FiveM ✗ (koppel in-game)';
+      userName.textContent = (me.username || storeUserName()) + ' — ' + status;
+      btnLink.style.display = fivemIn ? 'none' : 'inline-flex';
       navAdmin.style.display = me.isAdmin ? 'inline' : 'none';
     }
   }
@@ -40,7 +48,11 @@
     allBtn.type = 'button';
     allBtn.className = 'store-cat-btn' + (activeCat === 'all' ? ' active' : '');
     allBtn.textContent = 'Alles';
-    allBtn.onclick = () => { activeCat = 'all'; renderCategories(); renderProducts(); };
+    allBtn.onclick = () => {
+      activeCat = 'all';
+      renderCategories();
+      renderProducts();
+    };
     catList.appendChild(allBtn);
 
     catalog.categories.forEach((c) => {
@@ -48,22 +60,30 @@
       btn.type = 'button';
       btn.className = 'store-cat-btn' + (activeCat === c.id ? ' active' : '');
       btn.textContent = c.name;
-      btn.onclick = () => { activeCat = c.id; renderCategories(); renderProducts(); };
+      btn.onclick = () => {
+        activeCat = c.id;
+        renderCategories();
+        renderProducts();
+      };
       catList.appendChild(btn);
     });
   }
 
+  function buyLabel() {
+    if (!isStoreLoggedIn()) return 'Log in met Discord';
+    if (!canUseCoins()) return 'Koppel FiveM (Discord + FiveM vereist)';
+    return 'Kopen';
+  }
+
   function renderProducts() {
-    const items = catalog.products.filter(
-      (p) => activeCat === 'all' || p.categoryId === activeCat
-    );
+    const items = catalog.products.filter((p) => activeCat === 'all' || p.categoryId === activeCat);
     document.getElementById('emptyMsg').style.display = items.length ? 'none' : 'block';
     grid.innerHTML = '';
 
     items.forEach((p) => {
       const card = document.createElement('article');
       card.className = 'store-card';
-      const canBuy = catalog.me?.linked && (catalog.me.coins || 0) >= p.price;
+      const canBuy = canUseCoins() && (catalog.me?.coins || 0) >= p.price;
       card.innerHTML =
         '<div class="type-badge">' +
         esc(p.type || 'item') +
@@ -77,7 +97,7 @@
       const buy = document.createElement('button');
       buy.type = 'button';
       buy.className = 'btn-buy';
-      buy.textContent = catalog.me ? (catalog.me.linked ? 'Kopen' : 'Koppel FiveM eerst') : 'Log in om te kopen';
+      buy.textContent = buyLabel();
       buy.disabled = !canBuy;
       buy.onclick = () => purchase(p.id);
       card.appendChild(buy);
@@ -93,12 +113,21 @@
 
   async function loadCatalog() {
     catalog = await storeApi('/api/store');
+    if (catalog.me) setStoreSession({ ...catalog.me, accessToken: storeAccessToken(), linked: catalog.me.linked });
     updateAuthUI();
     renderCategories();
     renderProducts();
   }
 
   async function purchase(productId) {
+    if (!isStoreLoggedIn()) {
+      showToast('Log eerst in met Discord.');
+      return;
+    }
+    if (!canUseCoins()) {
+      showToast('Koppel FiveM via /koppelstore — coins vereisen Discord + FiveM.');
+      return;
+    }
     try {
       const res = await storeApi('/api/store-purchase', {
         method: 'POST',
@@ -114,22 +143,21 @@
   }
 
   btnLogin.onclick = () => {
-    window.location.href = getStoreDiscordAuthUrl(storeRedirectUri());
+    window.location.href = getStoreDiscordAuthUrl(discordRedirectUri());
   };
 
-  btnLogout.onclick = () => {
-    clearStoreToken();
-    catalog.me = null;
-    updateAuthUI();
-    renderProducts();
-  };
+  btnLogout.onclick = () => storeLogout();
 
   btnLink.onclick = async () => {
+    if (!isStoreLoggedIn()) {
+      showToast('Log eerst in met Discord.');
+      return;
+    }
     try {
       const res = await storeApi('/api/store-link', { method: 'POST' });
       linkCode.textContent = '/koppelstore ' + res.code;
       linkBox.style.display = 'block';
-      showToast('Koppelcode aangemaakt — ga in-game.');
+      showToast('Ga in-game en typ het commando.');
     } catch (e) {
       showToast(e.message);
     }
@@ -137,7 +165,7 @@
 
   (async function init() {
     try {
-      await handleStoreOAuthCallback(storeRedirectUri());
+      await handleStoreOAuthCallback();
     } catch (e) {
       showToast(e.message);
     }

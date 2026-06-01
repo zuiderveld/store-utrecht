@@ -1,19 +1,22 @@
-const crypto = require('crypto');
+const rolesFile = require('./discord-roles');
 
 function getClientId() {
-  return process.env.DISCORD_STORE_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '';
+  return process.env.DISCORD_CLIENT_ID || rolesFile.clientId;
 }
 
 function getAdminRoleIds() {
-  const raw = process.env.DISCORD_STORE_ADMIN_ROLES || '';
-  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const fromStore = process.env.DISCORD_STORE_ADMIN_ROLES;
+  if (fromStore) return fromStore.split(',').map((s) => s.trim()).filter(Boolean);
+  const fromBeheer = process.env.DISCORD_STAFF_BEHEER_ROLES;
+  if (fromBeheer) return fromBeheer.split(',').map((s) => s.trim()).filter(Boolean);
+  return rolesFile.beheerRoleIds || [];
 }
 
 async function exchangeCode(code, redirectUri) {
   const clientId = getClientId();
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error('DISCORD_STORE_CLIENT_ID en DISCORD_CLIENT_SECRET ontbreken in Vercel.');
+  if (!clientSecret) {
+    throw new Error('DISCORD_CLIENT_SECRET ontbreekt in Vercel (zelfde als staff-portaal).');
   }
 
   const body = new URLSearchParams({
@@ -36,36 +39,57 @@ async function exchangeCode(code, redirectUri) {
   return data.access_token;
 }
 
-async function fetchDiscordUser(accessToken) {
-  const res = await fetch('https://discord.com/api/users/@me', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error('Discord profiel ophalen mislukt');
-  return data;
-}
-
 async function getGuildMember(userId) {
   const token = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
-  if (!token || !guildId) return null;
+  if (!token || !guildId) {
+    throw new Error('DISCORD_BOT_TOKEN en DISCORD_GUILD_ID zijn verplicht (zelfde als staff).');
+  }
 
   const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
     headers: { Authorization: `Bot ${token}` },
   });
-  if (!res.ok) return null;
+
+  if (!res.ok) {
+    throw new Error('Je zit niet op de URP Discord server, of de bot mist rechten.');
+  }
   return res.json();
+}
+
+function avatarUrlFromUser(user) {
+  if (!user?.id) return null;
+  if (user.avatar) {
+    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`;
+  }
+  const disc = Number((BigInt(user.id) >> 22n) % 6n);
+  return `https://cdn.discordapp.com/embed/avatars/${disc}.png`;
 }
 
 function isAdmin(memberRoles) {
   const adminIds = getAdminRoleIds();
-  if (!adminIds.length) return false;
-  if (!memberRoles?.length) return false;
+  if (!adminIds.length || !memberRoles?.length) return false;
   return adminIds.some((id) => memberRoles.includes(id));
 }
 
-function createSessionToken() {
-  return crypto.randomBytes(32).toString('hex');
+async function verifyStoreMember(accessToken) {
+  const userRes = await fetch('https://discord.com/api/v10/users/@me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!userRes.ok) throw new Error('Discord sessie verlopen. Log opnieuw in.');
+  const user = await userRes.json();
+
+  const member = await getGuildMember(user.id);
+  const memberRoles = member.roles || [];
+  const displayName = member.nick || user.global_name || user.username;
+
+  return {
+    username: displayName,
+    discordUsername: user.username,
+    discordId: user.id,
+    avatarUrl: avatarUrlFromUser(user),
+    accessToken,
+    isAdmin: isAdmin(memberRoles),
+  };
 }
 
 function createLinkCode() {
@@ -77,11 +101,8 @@ function createLinkCode() {
 
 module.exports = {
   getClientId,
-  getAdminRoleIds,
   exchangeCode,
-  fetchDiscordUser,
-  getGuildMember,
-  isAdmin,
-  createSessionToken,
+  verifyStoreMember,
   createLinkCode,
+  getAdminRoleIds,
 };

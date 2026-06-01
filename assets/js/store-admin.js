@@ -17,6 +17,22 @@
     renderAll();
   }
 
+  function requireAdminPage() {
+    if (!isStoreLoggedIn()) {
+      sessionStorage.setItem('urpStoreRedirect', '/admin.html');
+      showToast('Log in met Discord');
+      setTimeout(() => {
+        window.location.href = getStoreDiscordAuthUrl(discordRedirectUri());
+      }, 800);
+      return false;
+    }
+    if (!isStoreAdmin()) {
+      showToast('Geen beheer-rechten (zelfde rollen als staff beheer).');
+      return false;
+    }
+    return true;
+  }
+
   document.querySelectorAll('.admin-tabs button').forEach((btn) => {
     btn.onclick = () => {
       document.querySelectorAll('.admin-tabs button').forEach((b) => b.classList.remove('active'));
@@ -44,7 +60,9 @@
       .join('');
 
     const prodCat = document.getElementById('prodCat');
-    prodCat.innerHTML = snapshot.categories.map((c) => '<option value="' + c.id + '">' + c.name + '</option>').join('');
+    prodCat.innerHTML = snapshot.categories
+      .map((c) => '<option value="' + c.id + '">' + c.name + '</option>')
+      .join('');
 
     document.getElementById('prodTable').innerHTML = snapshot.products
       .map(
@@ -194,16 +212,13 @@
   });
 
   document.getElementById('btnLogin').onclick = () => {
-    window.location.href = getStoreDiscordAuthUrl(storeAdminRedirectUri());
+    window.location.href = getStoreDiscordAuthUrl(discordRedirectUri());
   };
 
   (async function init() {
     try {
-      await handleStoreOAuthCallback(storeAdminRedirectUri());
-      if (!getStoreToken()) {
-        showToast('Log in met Discord (admin rol vereist)');
-        return;
-      }
+      await handleStoreOAuthCallback();
+      if (!requireAdminPage()) return;
       await loadSnapshot();
     } catch (e) {
       showToast(e.message);
