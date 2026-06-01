@@ -10,6 +10,38 @@
 
 **Belangrijk:** upload/deploy altijd met **`package.json`** + **`package-lock.json`** in de root (niet alleen HTML). Anders mist `@vercel/blob` en krijg je `Cannot find module '@vercel/blob'`.
 
+---
+
+## Handmatige upload (max 100 bestanden)
+
+Vercel weigert grote uploads. **Upload NOOIT `node_modules`** — dat zijn honderden bestanden.
+
+### Optie A — GitHub (aanbevolen)
+
+1. Maak repo `utrecht-store` op GitHub  
+2. Alleen map **`utrecht-store`** pushen (zonder `node_modules`)  
+3. Vercel → Import Git Repository → deploy automatisch  
+
+### Optie B — Handmatig (alleen deze map)
+
+Upload **alleen** de inhoud van `utrecht-store`, **zonder**:
+
+- `node_modules` ❌  
+- `fivem-resources` ❌ (hoort op je FiveM-server, niet op Vercel)  
+- `.vercel` ❌  
+
+Wel uploaden (~30 bestanden): `index.html`, `admin.html`, `package.json`, `package-lock.json`, `vercel.json`, `api/router.js`, `assets/`, `js/`, `server/`, `scripts/`
+
+### Optie C — ZIP
+
+```powershell
+cd "c:\Users\broed\Desktop\Nieuwe map (4)\utrecht-roleplay-main\utrecht-store"
+# ZIP zonder node_modules:
+Compress-Archive -Path index.html,admin.html,package.json,package-lock.json,vercel.json,api,assets,js,server,scripts,.vercelignore -DestinationPath ..\utrecht-store-deploy.zip -Force
+```
+
+Upload `utrecht-store-deploy.zip` in Vercel (als ZIP wordt ondersteund) of uitpakken en map selecteren **zonder node_modules**.
+
 ## 2. Domein
 
 Bijv. `store.utrechtroleplay.eu` → koppel aan dit project (niet aan de main site).
