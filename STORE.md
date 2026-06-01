@@ -16,7 +16,7 @@ Voeg redirect URIs toe voor je OAuth-app:
 
 - `https://store.utrechtroleplay.eu/`
 - `https://store.utrechtroleplay.eu/admin.html`
-- (lokaal) `http://localhost:3000/store/` enz.
+- (lokaal) `http://localhost:3000/` en `http://localhost:3000/admin.html`
 
 Scopes: `identify`
 

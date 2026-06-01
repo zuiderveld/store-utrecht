@@ -1,5 +1,6 @@
 /** Publieke store-config — apart project (store.utrechtroleplay.eu) */
 window.STORE_CONFIG = {
+  storeUrl: 'https://store.utrechtroleplay.eu',
   apiBase: window.location.origin,
   discordClientId: '1105558581304098867',
   mainSiteUrl: 'https://www.utrechtroleplay.eu/',

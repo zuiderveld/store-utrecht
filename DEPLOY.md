@@ -1,68 +1,38 @@
-# URP Status — 4e Vercel-project
+# Deploy utrecht-store (apart Vercel-project)
 
-Publieke statuspagina voor je drie sites:
+## 1. Vercel
 
-| Site | Standaard URL | Check |
-|------|----------------|-------|
-| Hoofdwebsite | `https://www.utrechtroleplay.eu` | `/api/health` (fallback `/`) |
-| Overheid | `https://overheid.utrechtroleplay.eu` | `/api/maintenance` |
-| Staff | `https://staff.utrechtroleplay.eu` | `/api/site-data` |
-| **FiveM** | `45.116.104.215:30120` | `/dynamic.json` + `/players.json` |
+- **Add New Project** → map `utrecht-store` (eigen GitHub-repo: `utrecht-store`)
+- Root Directory: leeg
+- Install: `npm install`
+- Output: `.`
 
-Pas URLs aan in **`data/sites.json`** als je andere domeinen gebruikt (bijv. `*.vercel.app`).
+## 2. Domein
 
-FiveM-config: **`data/fivem.json`** (host, poort, naam). Toont spelers online, max slots, map en ping.
+Bijv. `store.utrechtroleplay.eu` → koppel aan dit project (niet aan de main site).
 
----
+## 3. Environment Variables
 
-## GitHub + Vercel
+Zie `.env.example` — alle store-variabelen horen **hier**, niet op de main website.
 
-1. Nieuwe repo, bijv. `utrecht-status` — upload **alleen** deze map.
-2. Vercel → **Add New Project** → import repo.
-3. **Framework:** Other · **Build:** leeg · **Output:** `.`
-4. Deploy.
+## 4. Discord OAuth redirects
 
-Optioneel custom domein: `status.utrechtroleplay.eu` (DNS CNAME naar Vercel).
+- `https://store.utrechtroleplay.eu/`
+- `https://store.utrechtroleplay.eu/admin.html`
 
----
+## 5. FiveM
 
-## Environment variables (optioneel)
+`fivem-resources/utrp_store/config.lua`:
 
-| Variabele | Doel |
-|-----------|------|
-| `STATUS_URL_MAIN` | Overschrijft alleen de URL van site `main` |
-| `STATUS_URL_OVERHEID` | Idem voor `overheid` |
-| `STATUS_URL_STAFF` | Idem voor `staff` |
-| `STATUS_SITES_JSON` | Volledige JSON-config (overschrijft `data/sites.json`) |
-| `FIVEM_HOST` | IP of hostname game server |
-| `FIVEM_PORT` | Standaard `30120` |
-| `FIVEM_ENABLED` | `false` om FiveM-check uit te zetten |
-
-Geen secrets nodig voor de statuspagina zelf.
-
-**Let op:** je game server moet HTTP op poort 30120 bereikbaar zijn (standaard bij FiveM). Vercel moet die poort kunnen bereiken vanaf het internet.
-
----
-
-## Discord status-bericht
-
-Zie **`DISCORD.md`**: webhook + embed met websites, FiveM en **spelersbalk** (🟩⬛), elke 5 min automatisch via cron.
-
-API: `/api/discord-status` (2e serverless function — past nog op Hobby).
-
----
-
-## Lokaal testen
-
-```powershell
-cd utrecht-status
-npx vercel dev
+```lua
+Config.ApiUrl = 'https://store.utrechtroleplay.eu'
+Config.ApiKey = '<zelfde als STORE_BRIDGE_API_KEY>'
 ```
 
-Open `http://localhost:3000` — `/api/status` returned JSON met alle checks.
+## 6. Test
 
----
+`https://store.utrechtroleplay.eu/api/health` → `{"ok":true,"store":true}`
 
-## Hobby-plan
+## Logo
 
-Dit project gebruikt **1** serverless function (`api/status.js`). Geen npm-dependencies.
+Kopieer `logo.png` en `favicon.png` naar `assets/images/` en `assets/` (van main site `utrecht-roleplay-main/assets/`).
