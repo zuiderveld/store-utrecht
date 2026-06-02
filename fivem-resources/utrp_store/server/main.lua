@@ -74,6 +74,22 @@ local function bridgeRequest(method, path, body)
     return Citizen.Await(p)
 end
 
+local function asArray(t)
+    local out = {}
+    if type(t) ~= 'table' then return out end
+    for i = 1, #t do
+        out[#out + 1] = t[i]
+    end
+    if #out == 0 then
+        for _, v in pairs(t) do
+            if type(v) == 'string' or type(v) == 'number' then
+                out[#out + 1] = v
+            end
+        end
+    end
+    return out
+end
+
 local function notifyPlayer(src, msg, ntype)
     if GetResourceState('ox_lib') == 'started' then
         TriggerClientEvent('ox_lib:notify', src, {
@@ -298,25 +314,27 @@ ESX.RegisterServerCallback('utrp_store:checkout', function(source, cb, productId
         return
     end
 
-    if type(productIds) ~= 'table' or #productIds == 0 then
+    local ids = asArray(productIds)
+    if #ids == 0 then
         cb({ ok = false, error = 'Winkelwagen is leeg' })
         return
     end
 
     local result = bridgeRequest('POST', '/api/store-bridge?action=purchase-cart', {
         license = license,
-        productIds = productIds,
+        productIds = ids,
     })
 
     if result and result.ok then
         cb(result)
-        -- Direct verwerken zodat voertuigen meteen in garage komen
         CreateThread(function()
             Wait(500)
             pcall(processOrders)
         end)
     else
-        cb({ ok = false, error = (result and result.error) or 'Aankoop mislukt' })
+        local err = (result and result.error) or 'Aankoop mislukt'
+        notifyPlayer(source, err, 'error')
+        cb({ ok = false, error = err })
     end
 end)
 

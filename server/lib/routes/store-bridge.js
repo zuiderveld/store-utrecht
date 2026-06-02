@@ -1,6 +1,6 @@
 const { cors, json, readBody, checkBridgeKey } = require('../store/http');
 const { saveState, getState } = require('../store/blob-store');
-const { findUserByLicense, findUserInState, purchaseOne, purchaseCart, mergeOrderMeta } = require('../store/purchase-core');
+const { findUserByLicense, findUserInState, purchaseOne, purchaseCart, mergeOrderMeta, normalizeProductIds } = require('../store/purchase-core');
 
 function mapProduct(p) {
   return {
@@ -25,7 +25,8 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const action = req.query?.action || (req.method === 'POST' ? (await readBody(req)).action : null);
+    const body = req.method === 'POST' ? await readBody(req) : {};
+    const action = req.query?.action || body.action;
 
     if (action === 'health' || (!action && req.method === 'GET')) {
       const state = await getState();
@@ -41,7 +42,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'profile' && req.method === 'POST') {
-      const body = await readBody(req);
       const license = body.license;
       if (!license) return json(res, 400, { error: 'license verplicht' });
 
@@ -65,7 +65,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'link' && req.method === 'POST') {
-      const body = await readBody(req);
       const code = String(body.code || '').toUpperCase().trim();
       const license = body.license;
       const identifiers = body.identifiers || [];
@@ -99,7 +98,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'purchase' && req.method === 'POST') {
-      const body = await readBody(req);
       const license = body.license;
       const productId = body.productId;
       if (!license || !productId) return json(res, 400, { error: 'license en productId verplicht' });
@@ -128,10 +126,9 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'purchase-cart' && req.method === 'POST') {
-      const body = await readBody(req);
       const license = body.license;
-      const productIds = body.productIds;
-      if (!license || !productIds?.length) {
+      const productIds = normalizeProductIds(body.productIds);
+      if (!license || !productIds.length) {
         return json(res, 400, { error: 'license en productIds verplicht' });
       }
 
@@ -177,7 +174,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'complete' && req.method === 'POST') {
-      const body = await readBody(req);
       const orderId = body.orderId;
       const status = body.status === 'failed' ? 'failed' : 'done';
       if (!orderId) return json(res, 400, { error: 'orderId verplicht' });

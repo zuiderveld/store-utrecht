@@ -161,6 +161,17 @@
       showToast('Koppel eerst je account via store.utrechtroleplay.eu + /koppelstore', 'error');
       return;
     }
+    const product = state.products.find(function (x) {
+      return x.id === productId;
+    });
+    if (product && product.type === 'item' && !(product.meta && product.meta.item)) {
+      showToast('Dit item mist ox item naam in admin — kan niet gekocht worden', 'error');
+      return;
+    }
+    if (product && product.type === 'vehicle' && !(product.meta && product.meta.model)) {
+      showToast('Dit voertuig mist spawn model in admin — kan niet gekocht worden', 'error');
+      return;
+    }
     state.cart.push(productId);
     updateCartUI();
     showToast('Toegevoegd aan winkelwagen', 'success');

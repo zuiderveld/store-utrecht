@@ -26,17 +26,31 @@ function getProduct(state, productId) {
 function validateProductMeta(product) {
   const type = product.type || 'item';
   const meta = product.meta || {};
+  const label = product.name || product.id || 'Product';
   if (type === 'vehicle' && !meta.model) {
-    throw new Error('Voertuig-product mist spawn model — admin: vul meta.model in (bijv. adder)');
+    throw new Error(`${label}: mist spawn model (admin → meta.model)`);
   }
   if (type === 'item' && !meta.item) {
-    throw new Error('Item-product mist ox item naam — admin: vul meta.item in (bijv. bread)');
+    throw new Error(`${label}: mist ox item naam (admin → meta.item)`);
   }
 }
 
 function mergeOrderMeta(state, order) {
   const product = order.productId ? getProduct(state, order.productId) : null;
   return { ...(product?.meta || {}), ...(order.meta || {}) };
+}
+
+function normalizeProductIds(raw) {
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (raw && typeof raw === 'object') {
+    return Object.keys(raw)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((k) => raw[k])
+      .filter(Boolean)
+      .map(String);
+  }
+  if (raw) return [String(raw)];
+  return [];
 }
 
 function createOrder(user, product, price) {
@@ -119,4 +133,5 @@ module.exports = {
   purchaseCart,
   mergeOrderMeta,
   validateProductMeta,
+  normalizeProductIds,
 };
