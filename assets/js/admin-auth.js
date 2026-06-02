@@ -32,6 +32,16 @@ function adminRedirectUri() {
 }
 
 function openAdminDiscordLogin() {
+  if (!window.STORE_CONFIG || !window.STORE_CONFIG.discordClientId) {
+    alert('Store config laadt niet — ververs de pagina (js/store-config.js).');
+    return;
+  }
+
+  if (typeof window.getStoreDiscordAuthUrl === 'function') {
+    window.location.href = window.getStoreDiscordAuthUrl(adminRedirectUri());
+    return;
+  }
+
   const params = new URLSearchParams({
     client_id: window.STORE_CONFIG.discordClientId,
     redirect_uri: adminRedirectUri(),
@@ -39,6 +49,23 @@ function openAdminDiscordLogin() {
     scope: 'identify guilds guilds.members.read',
   });
   window.location.href = 'https://discord.com/api/oauth2/authorize?' + params.toString();
+}
+
+function bindAdminDiscordButton() {
+  var btn = document.getElementById('btnDiscordLogin');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+  btn.type = 'button';
+  btn.addEventListener('click', function (e) {
+    e.preventDefault();
+    openAdminDiscordLogin();
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindAdminDiscordButton);
+} else {
+  bindAdminDiscordButton();
 }
 
 async function adminDiscordLoginWithCode(code) {

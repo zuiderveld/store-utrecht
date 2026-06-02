@@ -203,6 +203,8 @@
   }
 
   document.getElementById('prodType').addEventListener('change', syncProductTypeFields);
+
+  function renderStats() {
     document.getElementById('statCategories').textContent = snapshot.categories.length;
     document.getElementById('statProducts').textContent = snapshot.products.length;
     document.getElementById('statUsers').textContent = snapshot.users.length;
@@ -603,10 +605,7 @@
     };
   }
 
-  var btnDiscordLogin = document.getElementById('btnDiscordLogin');
-  if (btnDiscordLogin) {
-    btnDiscordLogin.onclick = openAdminDiscordLogin;
-  }
+  bindAdminDiscordButton();
 
   btnLogout.onclick = function () {
     adminLogout();
