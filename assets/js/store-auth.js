@@ -37,7 +37,7 @@ function setStoreSession(data) {
   sessionStorage.setItem('urpStoreAccessToken', data.accessToken || '');
   sessionStorage.setItem('urpStoreBeheer', data.isAdmin ? 'true' : 'false');
   sessionStorage.setItem('urpStoreFivemLinked', data.fivemLinked || data.linked ? 'true' : 'false');
-  sessionStorage.setItem('urpStoreDiscordLinked', data.discordLinked ? 'true' : 'false');
+  sessionStorage.setItem('urpStoreDiscordLinked', (data.discordLinked || data.discordId) ? 'true' : 'false');
   if (data.userId) sessionStorage.setItem('urpStoreUserId', data.userId);
   else if (data.discordId) sessionStorage.setItem('urpStoreUserId', data.discordId);
   if (data.discordId) sessionStorage.setItem('urpStoreDiscordId', data.discordId);

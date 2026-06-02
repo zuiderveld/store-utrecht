@@ -77,28 +77,18 @@
 
     if (!isStoreLoggedIn()) {
       if (gateHint) {
-        gateHint.classList.add('hidden');
-        gateHint.textContent = '';
-      }
-      showGate(true);
-      return false;
-    }
-
-    if (storeAccessToken().startsWith('urp_')) {
-      if (gateHint) {
         gateHint.classList.remove('hidden');
         gateHint.textContent =
-          'Je bent ingelogd met e-mail. Log uit en gebruik "Inloggen met Discord" — admin werkt niet met e-mail login.';
+          'Je bent nog niet ingelogd op de store-website. Klik op de knop hieronder — alleen inloggen op Discord telt (niet alleen je rol op de server).';
       }
       showGate(true);
-      showToast('Admin vereist Discord login (niet e-mail).');
       return false;
     }
 
     try {
       const data = await storeApi('/api/store-auth', {
         method: 'POST',
-        body: { action: 'admin-check', accessToken: storeAccessToken() },
+        body: { action: 'admin-check' },
       });
 
       setStoreSession({
