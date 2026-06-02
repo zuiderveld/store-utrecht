@@ -82,6 +82,7 @@
         <button type="button" data-tab="products"><span>📦</span> Producten</button>
         <button type="button" data-tab="coins"><span>🪙</span> Coins</button>
         <button type="button" data-tab="orders"><span>🧾</span> Orders</button>
+        <button type="button" data-tab="maintenance"><span>🛠️</span> Onderhoud</button>
     </div>
 
     <div id="panel-categories" class="admin-panel active">
@@ -232,6 +233,29 @@
                     <tbody id="orderTable"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <div id="panel-maintenance" class="admin-panel">
+        <div class="admin-card">
+            <div class="admin-card-head"><h3>Store onderhoud</h3></div>
+            <p class="admin-hint" style="margin-bottom:1rem">
+                Zet de hele URP Store (website) op onderhoud. Bezoekers zien een onderhoudsscherm;
+                aankopen zijn geblokkeerd. Jij kunt de store en dit beheer-panel gewoon open houden.
+            </p>
+            <form class="admin-form" id="formMaintenance">
+                <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+                    <input type="checkbox" id="maintGlobal" style="width:auto">
+                    <span>Store in onderhoud</span>
+                </label>
+                <label>Onderhoudsbericht voor bezoekers
+                    <textarea id="maintMessage" rows="4" placeholder="De store is tijdelijk gesloten…"></textarea>
+                </label>
+                <div class="admin-form-actions">
+                    <button type="submit" class="btn-main">Onderhoud opslaan</button>
+                </div>
+            </form>
+            <p class="admin-hint" id="maintStatus" style="margin-top:0.75rem"></p>
         </div>
     </div>
 </div>

@@ -596,6 +596,69 @@
     }
   });
 
+  function applyMaintState(state) {
+    state = state || {};
+    var globalEl = document.getElementById('maintGlobal');
+    var msgEl = document.getElementById('maintMessage');
+    var status = document.getElementById('maintStatus');
+    if (globalEl) globalEl.checked = !!state.global;
+    if (msgEl) msgEl.value = state.message || '';
+    if (!status) return;
+    var parts = [];
+    parts.push(
+      state.global
+        ? 'Store staat IN onderhoud voor bezoekers (aankopen geblokkeerd).'
+        : 'Store is open voor bezoekers.'
+    );
+    if (state.updatedAt) {
+      try {
+        parts.push('Laatst opgeslagen: ' + new Date(state.updatedAt).toLocaleString('nl-NL'));
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    if (state._storage === 'blob') {
+      parts.push('Opgeslagen in Vercel Blob.');
+    } else if (state._storage === 'default' || state._storage === 'blob-empty') {
+      parts.push('Zet BLOB_READ_WRITE_TOKEN in Vercel zodat onderhoud bewaard blijft.');
+    }
+    status.textContent = parts.join(' ');
+  }
+
+  async function loadMaintenance() {
+    var res = await fetch(window.STORE_CONFIG.apiBase + '/api/maintenance', { cache: 'no-store' });
+    var state = await res.json().catch(function () {
+      return {};
+    });
+    applyMaintState(state);
+  }
+
+  var formMaintenance = document.getElementById('formMaintenance');
+  if (formMaintenance) {
+    formMaintenance.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      try {
+        var data = await adminApiRequest('/api/maintenance', {
+          method: 'POST',
+          body: {
+            maintenance: {
+              global: document.getElementById('maintGlobal').checked,
+              message: document.getElementById('maintMessage').value,
+            },
+          },
+        });
+        applyMaintState(data.maintenance || {});
+        showToast(
+          data.maintenance && data.maintenance.global
+            ? 'Store op onderhoud gezet'
+            : 'Onderhoud uitgeschakeld — store is open'
+        );
+      } catch (err) {
+        showToast(err.message || 'Opslaan mislukt');
+      }
+    });
+  }
+
   if (adminLoginForm) {
     adminLoginForm.onsubmit = async function (e) {
       e.preventDefault();
@@ -610,6 +673,7 @@
         document.getElementById('adminPass').value = '';
         openAdminApp();
         await loadSnapshot();
+        await loadMaintenance();
         syncProductTypeFields();
         showToast('Ingelogd als beheerder');
       } catch (err) {
@@ -637,6 +701,7 @@
         await adminDiscordLoginWithCode(code);
         openAdminApp();
         await loadSnapshot();
+        await loadMaintenance();
         syncProductTypeFields();
         showToast('Ingelogd via Discord');
         return;
@@ -689,6 +754,7 @@
 
     try {
       await loadSnapshot();
+      await loadMaintenance();
       syncProductTypeFields();
     } catch (e) {
       showToast(e.message);

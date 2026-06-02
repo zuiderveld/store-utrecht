@@ -1,5 +1,6 @@
 const { cors, json, readBody } = require('../store/http');
 const { requireDiscordAndFivem } = require('../store/session');
+const { assertStoreOpen } = require('./store-maintenance');
 const { saveState } = require('../store/blob-store');
 const { findUserInState, purchaseCart, normalizeProductIds } = require('../store/purchase-core');
 const { processPendingDiscordRoleOrders } = require('../store/discord-role-fulfill');
@@ -10,6 +11,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Alleen POST' });
 
   try {
+    await assertStoreOpen();
     const ctx = await requireDiscordAndFivem(req.headers.authorization);
     const body = await readBody(req);
     const productIds = normalizeProductIds(body.productIds);
