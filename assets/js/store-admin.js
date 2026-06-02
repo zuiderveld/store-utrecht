@@ -3,9 +3,8 @@
   const adminGate = document.getElementById('adminGate');
   const adminApp = document.getElementById('adminApp');
   const adminSession = document.getElementById('adminSession');
-  const btnLogin = document.getElementById('btnLogin');
   const btnLogout = document.getElementById('btnLogout');
-  const btnLoginGate = document.getElementById('btnLoginGate');
+  const adminLoginForm = document.getElementById('adminLoginForm');
   const productFormTitle = document.getElementById('productFormTitle');
 
   let snapshot = { categories: [], products: [], users: [], orders: [] };
@@ -31,213 +30,55 @@
   }
 
   async function adminApi(body) {
-    return storeApi('/api/store-admin', { method: 'POST', body: body });
+    return adminApiRequest('/api/store-admin', { method: 'POST', body: body });
   }
 
   async function loadSnapshot() {
-    snapshot = await storeApi('/api/store-admin?action=snapshot');
+    snapshot = await adminApiRequest('/api/store-admin?action=snapshot');
     renderAll();
   }
 
   function showGate(show) {
     adminGate.classList.toggle('hidden', !show);
     adminApp.classList.toggle('hidden', show);
-    var loggedIn = isStoreLoggedIn();
-    btnLogin.style.display = show && !loggedIn ? 'inline-flex' : 'none';
-    btnLogout.classList.toggle('hidden', !loggedIn);
+    var loggedIn = isAdminLoggedIn();
+    btnLogout.classList.toggle('hidden', !loggedIn || show);
     adminSession.classList.toggle('hidden', !loggedIn || show);
   }
 
   function setGateHint(text, asHtml) {
     var gateHint = document.getElementById('adminGateHint');
     if (!gateHint) return;
+    if (!text) {
+      gateHint.classList.add('hidden');
+      gateHint.textContent = '';
+      return;
+    }
     gateHint.classList.remove('hidden');
     if (asHtml) gateHint.innerHTML = text;
     else gateHint.textContent = text;
   }
 
   function updateAdminHeader() {
-    if (!isStoreLoggedIn()) return;
-    const name = sessionStorage.getItem('urpStoreUser') || 'Beheerder';
-    document.getElementById('adminUserName').textContent = name;
-    const avatar = sessionStorage.getItem('urpStoreAvatarUrl');
-    const img = document.getElementById('adminAvatar');
-    if (avatar) {
-      img.src = avatar;
-      img.style.display = 'block';
-    } else {
-      img.style.display = 'none';
-    }
-  }
-
-  function formatRoleList(roles, ids) {
-    if (roles && roles.length) {
-      return roles
-        .map(function (r) {
-          return r.name ? r.name + ' (' + r.id + ')' : r.id;
-        })
-        .join(', ');
-    }
-    return (ids || []).join(', ') || 'geen';
-  }
-
-  async function refreshAdminFromStore() {
-    try {
-      const data = await storeApi('/api/store');
-      if (!data.me) return null;
-      setStoreSession(Object.assign({}, data.me, { accessToken: storeAccessToken() }));
-      return data.me;
-    } catch (e) {
-      return null;
-    }
+    if (!isAdminLoggedIn()) return;
+    document.getElementById('adminUserName').textContent = adminUserName();
+    document.getElementById('adminAvatar').style.display = 'none';
   }
 
   function openAdminApp() {
-    var gateHint = document.getElementById('adminGateHint');
-    if (gateHint) {
-      gateHint.classList.add('hidden');
-      gateHint.textContent = '';
-    }
+    setGateHint('');
     showGate(false);
     updateAdminHeader();
   }
 
-  function formatAdminGateFailure(data) {
-    var unresolved = (data.unresolvedRoleTokens || []).join(', ');
-    var errLine = data.error ? '<br><strong>Fout:</strong> ' + esc(data.error) : '';
-    var discordLine = data.discordId
-      ? '<br><strong>Jouw Discord user-ID:</strong> <code>' + esc(data.discordId) + '</code>'
-      : '';
-    var roleSourceLine = data.roleSource
-      ? '<br><small>Rollen gelezen via: ' + esc(data.roleSource) + '</small>'
-      : '';
-    var allowlistHint = '';
-    if ((data.misconfiguredAllowlistRoleIds || []).length) {
-      allowlistHint =
-        '<br><strong style="color:#fca5a5">Fout in Vercel STORE_ADMIN_DISCORD_IDS:</strong> je hebt een <em>rol-ID</em> ingevuld (<code>' +
-        esc(data.misconfiguredAllowlistRoleIds.join(', ')) +
-        '</code>). Daar moet je <strong>user-ID</strong> staan — zie hierboven bij Jouw Discord user-ID.';
-    } else if ((data.allowlistCount || 0) > 0 && data.discordId) {
-      allowlistHint =
-        '<br><small>Allowlist actief (' +
-        data.allowlistCount +
-        ' ID(s)) — jouw user-ID moet exact overeenkomen. Na wijziging in Vercel: opnieuw deployen + hier opnieuw inloggen.</small>';
-    }
-    var botHint = '';
-    if (!data.botTokenSet || !data.guildIdSet) {
-      botHint =
-        '<br><strong style="color:#fca5a5">Vercel mist DISCORD_BOT_TOKEN of DISCORD_GUILD_ID</strong> (URP server: <code>1416816652644909109</code>).';
-    }
-    return (
-      'Geen beheer-toegang (Discord server …' +
-      esc(data.guildIdSuffix || '??????') +
-      ').' +
-      errLine +
-      discordLine +
-      roleSourceLine +
-      allowlistHint +
-      botHint +
-      '<br><strong>Vereiste store-rollen (rol-ID):</strong> <code>' +
-      esc((data.requiredRoleIds || []).join(', ') || 'niet geconfigureerd') +
-      '</code><br><strong>Jouw rollen op de server:</strong> ' +
-      esc(formatRoleList(data.memberRoles, data.memberRoleIds)) +
-      (unresolved
-        ? '<br><strong>Let op:</strong> onbekende rolnamen in Vercel: <code>' +
-          esc(unresolved) +
-          '</code>'
-        : '') +
-      '<br><br><strong>Oplossing:</strong> klik opnieuw op <em>Inloggen met Discord</em> (niet alleen e-mail). Zet in Vercel <code>STORE_ADMIN_DISCORD_IDS</code> = jouw user-ID hierboven.'
-    );
-  }
-
-  async function refreshAdminAccess() {
-    const gateHint = document.getElementById('adminGateHint');
-
-    if (!isStoreLoggedIn()) {
-      setGateHint(
-        'Je bent nog niet ingelogd. Ga naar de store en log in, of klik hieronder op Discord.'
-      );
+  async function requireAdminPage() {
+    if (!(await verifyAdminSession())) {
       showGate(true);
+      setGateHint('Log in met je beheer-gebruikersnaam en wachtwoord.');
       return false;
     }
-
-    updateAdminHeader();
-    setGateHint('Ingelogd als ' + storeUserName() + ' — toegang controleren…');
-    showGate(true);
-
-    var me = await refreshAdminFromStore();
-    if (me && me.isAdmin) {
-      openAdminApp();
-      return true;
-    }
-    if (me && me.isAdmin === false) {
-      sessionStorage.setItem('urpStoreBeheer', 'false');
-    }
-
-    setGateHint('Beheer-rechten controleren via Discord…');
-
-    try {
-      const headers = { 'Content-Type': 'application/json' };
-      const token = storeAccessToken();
-      if (token) headers.Authorization = 'Bearer ' + token;
-
-      const res = await fetch(window.STORE_CONFIG.apiBase + '/api/store-auth', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify({ action: 'admin-check' }),
-      });
-      const data = await res.json().catch(function () {
-        return {};
-      });
-
-      if (!res.ok && !data.requiredRoleIds && !data.memberRoleIds) {
-        throw new Error(data.error || res.statusText || 'Admin check mislukt');
-      }
-
-      if (!res.ok && data.error && !data.discordId) {
-        throw new Error(data.error);
-      }
-
-      setStoreSession({
-        username: data.username,
-        accessToken: storeAccessToken(),
-        isAdmin: data.isAdmin,
-        discordId: data.discordId,
-        discordLinked: true,
-        avatarUrl: data.avatarUrl,
-        loginMethod: 'discord',
-      });
-
-      if (data.isAdmin === true || data.adminViaUserAllowlist) {
-        openAdminApp();
-        return true;
-      }
-
-      if (!data.isAdmin) {
-        if (gateHint) {
-          gateHint.classList.remove('hidden');
-          gateHint.innerHTML = formatAdminGateFailure(data);
-        }
-        showGate(true);
-        showToast('Geen store-beheer rol op Discord.');
-        return false;
-      }
-
-      openAdminApp();
-      return true;
-    } catch (err) {
-      if (gateHint) {
-        gateHint.classList.remove('hidden');
-        gateHint.textContent = err.message || 'Discord check mislukt.';
-      }
-      showGate(true);
-      showToast(err.message || 'Admin check mislukt');
-      return false;
-    }
-  }
-
-  function requireAdminPage() {
-    return refreshAdminAccess();
+    openAdminApp();
+    return true;
   }
 
   function resetCategoryForm() {
@@ -731,100 +572,75 @@
     }
   });
 
-  function goDiscordLogin() {
-    clearStoreSession();
-    window.location.href = getStoreDiscordAuthUrl(storeOAuthReturnUri(), null, 'admin');
+  if (adminLoginForm) {
+    adminLoginForm.onsubmit = async function (e) {
+      e.preventDefault();
+      var submitBtn = document.getElementById('btnLoginGate');
+      if (submitBtn) submitBtn.disabled = true;
+      setGateHint('Inloggen…');
+      try {
+        await adminLogin(
+          document.getElementById('adminUser').value.trim(),
+          document.getElementById('adminPass').value
+        );
+        document.getElementById('adminPass').value = '';
+        openAdminApp();
+        await loadSnapshot();
+        syncProductTypeFields();
+        showToast('Ingelogd als beheerder');
+      } catch (err) {
+        setGateHint(err.message || 'Inloggen mislukt');
+        showToast(err.message || 'Inloggen mislukt');
+      }
+      if (submitBtn) submitBtn.disabled = false;
+    };
   }
 
-  btnLogin.onclick = goDiscordLogin;
-  btnLoginGate.onclick = goDiscordLogin;
   btnLogout.onclick = function () {
-    storeLogout();
+    adminLogout();
   };
 
   (async function init() {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('error')) {
-      showToast(
-        'Discord login mislukt: ' + (params.get('error_description') || params.get('error'))
-      );
+    try {
+      var health = await fetch(window.STORE_CONFIG.apiBase + '/api/health');
+      if (!health.ok) throw new Error('API offline');
+    } catch (e) {
       setGateHint(
-        'Discord redirect ontbreekt. Voeg in Discord Developer Portal toe:\n' +
-          window.location.origin +
-          '/\n' +
-          window.location.origin +
-          '/admin.html'
+        'Store API werkt niet — deploy op Vercel moet de map server/ bevatten (niet alleen HTML).'
       );
-      window.history.replaceState({}, '', '/admin.html');
-    }
-
-    if (params.get('code')) {
-      setGateHint('Discord login verwerken…');
-      if (btnLoginGate) btnLoginGate.disabled = true;
+      showGate(true);
+      showToast('Backend API niet bereikbaar');
+      return;
     }
 
     try {
-      var oauth = await handleStoreOAuthCallback();
-      if (oauth && oauth.accessToken) {
-        if (oauth.isAdmin) {
-          setStoreSession({
-            username: oauth.username,
-            accessToken: oauth.accessToken,
-            isAdmin: true,
-            discordId: oauth.discordId,
-            discordLinked: true,
-            avatarUrl: oauth.avatarUrl,
-            loginMethod: 'discord',
-          });
-          showGate(false);
-          updateAdminHeader();
-          try {
-            await loadSnapshot();
-            syncProductTypeFields();
-          } catch (err) {
-            showToast(err.message);
-          }
-          return;
-        }
-        if (oauth && oauth.discordId) {
-          setStoreSession({
-            username: oauth.username,
-            accessToken: oauth.accessToken,
-            isAdmin: false,
-            discordId: oauth.discordId,
-            discordLinked: true,
-            avatarUrl: oauth.avatarUrl,
-            loginMethod: 'discord',
-          });
-        }
+      var cfg = await adminApiRequest('/api/store-admin-auth', {
+        method: 'POST',
+        body: { action: 'config' },
+      });
+      if (!cfg.passwordConfigured) {
+        setGateHint(
+          'STORE_ADMIN_PASSWORD ontbreekt in Vercel. Zet een sterk wachtwoord in Environment Variables en redeploy.'
+        );
+      } else if (cfg.usernameHint) {
+        var userInput = document.getElementById('adminUser');
+        if (userInput && !userInput.value) userInput.placeholder = cfg.usernameHint;
       }
     } catch (e) {
-      setGateHint('Login mislukt: ' + e.message);
-      showToast(e.message);
+      /* config optioneel */
     }
 
-    if (btnLoginGate) btnLoginGate.disabled = false;
-
-    if (!params.get('code')) {
-      try {
-        var health = await fetch(window.STORE_CONFIG.apiBase + '/api/health');
-        if (!health.ok) throw new Error('API offline');
-      } catch (e) {
-        setGateHint(
-          'Store API werkt niet — deploy op Vercel moet de map server/ bevatten (niet alleen HTML).'
-        );
-        showGate(true);
-        showToast('Backend API niet bereikbaar');
-        return;
-      }
+    if (!(await requireAdminPage())) {
+      showGate(true);
+      return;
     }
 
-    if (!(await requireAdminPage())) return;
     try {
       await loadSnapshot();
       syncProductTypeFields();
     } catch (e) {
       showToast(e.message);
+      if (!(await requireAdminPage())) return;
     }
   })();
 })();

@@ -1068,7 +1068,7 @@
 }
 
 .admin-gate-card {
-    max-width: 440px;
+    max-width: 420px;
     width: 100%;
     text-align: center;
     padding: 40px 32px;
@@ -1107,6 +1107,37 @@
 .admin-gate-hint code {
     font-size: 0.8rem;
     word-break: break-all;
+}
+
+.admin-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+    text-align: left;
+}
+
+.admin-login-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: rgba(234, 240, 255, 0.85);
+}
+
+.admin-login-form input {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.25);
+    color: #fff;
+    font-size: 1rem;
+}
+
+.admin-login-form .btn-main {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: center;
 }
 
 .admin-wrap {

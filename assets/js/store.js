@@ -177,11 +177,6 @@
       btnLink.classList.toggle('hidden', !discordOk || fivemOk);
       btnDropdownLinkDiscord.classList.toggle('hidden', discordOk);
       btnDropdownLinkFivem.classList.toggle('hidden', !discordOk || fivemOk);
-      if (me && me.isAdmin != null) {
-        sessionStorage.setItem('urpStoreBeheer', me.isAdmin ? 'true' : 'false');
-      }
-      dropdownAdmin.classList.toggle('hidden', !me?.isAdmin);
-      navAdmin.style.display = me?.isAdmin ? 'inline' : 'none';
     } else {
       loggedBanner.classList.add('hidden');
       sessionMenu.classList.add('hidden');

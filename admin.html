@@ -25,12 +25,27 @@
             <img id="adminAvatar" class="store-avatar" alt="">
             <span id="adminUserName">Beheerder</span>
         </div>
-        <button type="button" class="btn-main" id="btnLogin">Discord login</button>
         <button type="button" class="btn-outline hidden" id="btnLogout">Uitloggen</button>
     </div>
 </header>
 
-
+<div class="admin-gate" id="adminGate">
+    <div class="admin-gate-card">
+        <div class="admin-gate-icon">🔐</div>
+        <h2>Store beheer</h2>
+        <p>Log in met je beheer-account (apart van de store voor spelers).</p>
+        <p class="admin-gate-hint hidden" id="adminGateHint"></p>
+        <form id="adminLoginForm" class="admin-login-form">
+            <label>Gebruikersnaam
+                <input name="username" id="adminUser" type="text" autocomplete="username" required placeholder="admin">
+            </label>
+            <label>Wachtwoord
+                <input name="password" id="adminPass" type="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" class="btn-main" id="btnLoginGate">Inloggen</button>
+        </form>
+    </div>
+</div>
 
 <div class="admin-wrap hidden" id="adminApp">
     <section class="admin-hero">
@@ -209,7 +224,7 @@
 <div class="store-toast" id="toast"></div>
 
 <script src="js/store-config.js"></script>
-<script src="assets/js/store-auth.js"></script>
+<script src="assets/js/admin-auth.js"></script>
 <script src="assets/js/store-admin.js"></script>
 </body>
 </html>

@@ -28,11 +28,11 @@ Scopes: `identify guilds guilds.members.read`
 | `DISCORD_CLIENT_SECRET` | Ja | Zelfde Discord-app als staff |
 | `DISCORD_BOT_TOKEN` | Ja | Bot moet op URP Discord staan |
 | `DISCORD_GUILD_ID` | Ja | **`1416816652644909109`** (URP Discord) |
-| `DISCORD_STORE_ADMIN_ROLES` | Nee | Default in code: **`1502448726676078704`** (Store Beheer) |
-| `STORE_ADMIN_DISCORD_IDS` | Nee | Optioneel: jouw Discord **user-ID** |
+| `STORE_ADMIN_USER` | Nee | Admin login gebruikersnaam (default `admin`) |
+| `STORE_ADMIN_PASSWORD` | Ja | Wachtwoord voor `/admin.html` |
 | `STORE_BRIDGE_API_KEY` | Ja | Zelfde als FiveM `config.lua` |
 
-**Belangrijk:** `DISCORD_GUILD_ID` is **niet** het staff-portaal — het is de URP Discord server (`1416816652644909109`).
+**Admin** gebruikt **wachtwoord** (`STORE_ADMIN_*`), niet Discord rollen.
 
 ## Inloggen
 
@@ -86,11 +86,23 @@ Map: `fivem-resources/utrp_store/`
 5. `ensure utrp_store` in `server.cfg`
 6. In-game: `/store` — `/koppelstore CODE` voor eerste koppeling
 
-## Admin
+## Admin (`/admin.html`)
 
-- Inloggen met Discord-account dat **DISCORD_STORE_ADMIN_ROLES** heeft
-- Categorieën / producten / coins beheren
-- Voertuig-product: type `vehicle`, meta `model` + `garage`
+**Aparte login** — geen Discord rollen meer nodig.
+
+| Vercel variabele | Beschrijving |
+|------------------|--------------|
+| `STORE_ADMIN_USER` | Gebruikersnaam (default: `admin`) |
+| `STORE_ADMIN_PASSWORD` | Sterk wachtwoord — **verplicht** |
+
+1. Zet beide in Vercel → redeploy  
+2. Ga naar `/admin.html`  
+3. Log in met gebruikersnaam + wachtwoord  
+
+Sessie duurt 12 uur. Store-spelers login (Discord/e-mail) is **los** hiervan.
+
+- Categorieën / producten / coins beheren  
+- Voertuig-product: type `vehicle`, meta `model` + garage ID  
 
 ## API (bridge)
 
