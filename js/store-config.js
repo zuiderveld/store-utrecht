@@ -18,10 +18,16 @@ function discordRedirectUri() {
   return window.location.origin + '/';
 }
 
+/** Altijd geregistreerd in Discord — gebruik voor admin-login (state=admin). */
+function storeOAuthReturnUri() {
+  return window.location.origin + '/';
+}
+
 window.storeRedirectUri = discordRedirectUri;
 window.storeAdminRedirectUri = discordRedirectUri;
+window.storeOAuthReturnUri = storeOAuthReturnUri;
 
-window.getStoreDiscordAuthUrl = function (redirectUri, linkUserId) {
+window.getStoreDiscordAuthUrl = function (redirectUri, linkUserId, returnTo) {
   const params = new URLSearchParams({
     client_id: DISCORD_CLIENT_ID,
     redirect_uri: redirectUri || discordRedirectUri(),
@@ -29,5 +35,6 @@ window.getStoreDiscordAuthUrl = function (redirectUri, linkUserId) {
     scope: 'identify guilds',
   });
   if (linkUserId) params.set('state', 'link:' + linkUserId);
+  else if (returnTo === 'admin') params.set('state', 'admin');
   return 'https://discord.com/api/oauth2/authorize?' + params.toString();
 };

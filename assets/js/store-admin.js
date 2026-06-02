@@ -640,7 +640,8 @@
   });
 
   function goDiscordLogin() {
-    window.location.href = getStoreDiscordAuthUrl(discordRedirectUri());
+    sessionStorage.setItem('urpStoreRedirect', '/admin.html');
+    window.location.href = getStoreDiscordAuthUrl(storeOAuthReturnUri(), null, 'admin');
   }
 
   btnLogin.onclick = goDiscordLogin;
@@ -650,6 +651,13 @@
   };
 
   (async function init() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error')) {
+      showToast(
+        'Discord login mislukt: ' + (params.get('error_description') || params.get('error'))
+      );
+      window.history.replaceState({}, '', '/admin.html');
+    }
     try {
       await handleStoreOAuthCallback();
     } catch (e) {

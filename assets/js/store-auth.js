@@ -87,13 +87,13 @@ async function storeApi(path, options = {}) {
   return data;
 }
 
-async function discordStoreAuthWithCode(code, linkUserId) {
+async function discordStoreAuthWithCode(code, linkUserId, redirectUri) {
   const res = await fetch(window.STORE_CONFIG.apiBase + '/api/store-auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       code: code,
-      redirectUri: discordRedirectUri(),
+      redirectUri: redirectUri || discordRedirectUri(),
       linkUserId: linkUserId || undefined,
     }),
   });
@@ -125,7 +125,19 @@ async function handleStoreOAuthCallback() {
     linkUserId = storeUserId();
   }
 
-  const data = await discordStoreAuthWithCode(code, linkUserId);
+  const redirectUri =
+    state === 'admin' ? storeOAuthReturnUri() : discordRedirectUri();
+
+  const data = await discordStoreAuthWithCode(code, linkUserId, redirectUri);
+
+  if (state === 'admin') {
+    window.history.replaceState({}, '', '/admin.html');
+    if (!window.location.pathname.includes('admin')) {
+      window.location.replace('/admin.html');
+    }
+    return data;
+  }
+
   const clean = window.location.pathname.includes('admin') ? '/admin.html' : '/';
   window.history.replaceState({}, '', clean);
   return data;
@@ -141,7 +153,8 @@ function storeLogout() {
     }).catch(function () {});
   }
   clearStoreSession();
-  window.location.replace('/');
+  const dest = window.location.pathname.includes('admin') ? '/admin.html' : '/';
+  window.location.replace(dest);
 }
 
 function openDiscordLogin(linkUserId) {
