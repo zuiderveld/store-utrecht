@@ -103,6 +103,7 @@
       document.getElementById('prodCat').value = snapshot.categories[0].id;
     }
     productFormTitle.textContent = 'Nieuw product';
+    syncProductTypeFields();
   }
 
   function resetUserForm() {
@@ -163,7 +164,34 @@
     return '<span class="admin-status ' + cls + '">' + esc(status || 'pending') + '</span>';
   }
 
-  function renderStats() {
+  function formatOrderTime(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleString('nl-NL', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function syncProductTypeFields() {
+    const type = document.getElementById('prodType').value;
+    const vehicleFields = document.getElementById('prodVehicleFields');
+    const itemFields = document.getElementById('prodItemFields');
+    const sectionVehicle = document.getElementById('prodSectionVehicle');
+    const sectionItem = document.getElementById('prodSectionItem');
+    const showVehicle = type === 'vehicle';
+    const showItem = type === 'item';
+
+    vehicleFields.classList.toggle('hidden', !showVehicle);
+    sectionVehicle.classList.toggle('hidden', !showVehicle);
+    itemFields.classList.toggle('hidden', !showItem);
+    sectionItem.classList.toggle('hidden', !showItem);
+    document.getElementById('prodOxItem').required = showItem;
+    document.getElementById('prodModel').required = showVehicle;
+  }
+
+  document.getElementById('prodType').addEventListener('change', syncProductTypeFields);
     document.getElementById('statCategories').textContent = snapshot.categories.length;
     document.getElementById('statProducts').textContent = snapshot.products.length;
     document.getElementById('statUsers').textContent = snapshot.users.length;
@@ -224,6 +252,12 @@
               esc(p.name) +
               '</strong>' +
               (p.active === false ? ' <span class="admin-status failed">inactief</span>' : '') +
+              (p.type === 'item' && !(p.meta && p.meta.item)
+                ? ' <span class="admin-status failed">geen ox item</span>'
+                : '') +
+              (p.type === 'vehicle' && !(p.meta && p.meta.model)
+                ? ' <span class="admin-status failed">geen model</span>'
+                : '') +
               '</td><td>' +
               p.price +
               ' 🪙</td><td>' +
@@ -278,15 +312,35 @@
     document.getElementById('orderTable').innerHTML = snapshot.orders.length
       ? snapshot.orders
           .map(function (o) {
+            const buyer =
+              o.username ||
+              (o.email ? o.email : null) ||
+              (o.license ? o.license.replace('license:', '').slice(0, 10) + '…' : 'Onbekend');
+            const buyerSub = [
+              o.email && o.username ? o.email : null,
+              o.license ? o.license.replace('license:', '').slice(0, 14) + '…' : null,
+            ]
+              .filter(Boolean)
+              .join(' · ');
             return (
               '<tr><td class="mono">' +
               esc(o.id) +
+              (o.createdAt ? '<br><span class="admin-order-time">' + esc(formatOrderTime(o.createdAt)) + '</span>' : '') +
+              '</td><td><strong>' +
+              esc(buyer) +
+              '</strong>' +
+              (buyerSub ? '<br><span class="admin-user-sub">' + esc(buyerSub) + '</span>' : '') +
+              '</td><td class="mono">' +
+              (o.discordId
+                ? esc(o.discordId)
+                : '<span class="admin-status pending">—</span>') +
               '</td><td>' +
               esc(o.productName) +
+              (o.price ? '<br><span class="admin-user-sub">' + o.price + ' 🪙</span>' : '') +
+              (o.note ? '<br><span class="admin-user-sub">' + esc(o.note) + '</span>' : '') +
               '</td><td>' +
               statusBadge(o.status) +
-              '</td><td class="mono">' +
-              esc(o.license ? o.license.replace('license:', '').slice(0, 12) + '…' : '—') +
+              (o.refunded ? ' <span class="admin-status pending">refund</span>' : '') +
               '</td><td>' +
               (o.status === 'failed'
                 ? '<button type="button" class="btn-sm btn-sm-edit" data-requeue-order="' +
@@ -297,7 +351,7 @@
             );
           })
           .join('')
-      : emptyRow(5, 'Nog geen orders');
+      : emptyRow(6, 'Nog geen orders');
   }
 
   document.getElementById('formCategory').onsubmit = async function (e) {
@@ -492,6 +546,7 @@
       document.getElementById('prodLocation').value = p.meta?.location || '';
       document.getElementById('prodActive').checked = p.active !== false;
       productFormTitle.textContent = 'Product bewerken';
+      syncProductTypeFields();
       document.querySelector('.admin-tabs button[data-tab="products"]').click();
       showToast('Product geladen');
     }
@@ -525,6 +580,7 @@
     if (!requireAdminPage()) return;
     try {
       await loadSnapshot();
+      syncProductTypeFields();
     } catch (e) {
       showToast(e.message);
     }

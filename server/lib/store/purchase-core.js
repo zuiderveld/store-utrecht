@@ -57,6 +57,7 @@ function createOrder(user, product, price) {
   return {
     id: 'ord_' + crypto.randomBytes(8).toString('hex'),
     discordId: user.discordId,
+    username: user.globalName || user.displayName || user.username || null,
     license: user.license,
     identifiers: user.identifiers || [],
     productId: product.id,

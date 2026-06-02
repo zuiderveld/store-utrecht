@@ -38,6 +38,38 @@ function mapUserForAdmin(u) {
   };
 }
 
+function findUserForOrder(state, order) {
+  if (!order) return null;
+  if (order.discordId && state.users[order.discordId]) return state.users[order.discordId];
+  if (order.license) {
+    const byLicense = Object.values(state.users || {}).find((u) => u.license === order.license);
+    if (byLicense) return byLicense;
+  }
+  if (order.discordId) {
+    return Object.values(state.users || {}).find((u) => u.discordId === order.discordId) || null;
+  }
+  return null;
+}
+
+function mapOrderForAdmin(state, order) {
+  const user = findUserForOrder(state, order);
+  return {
+    id: order.id,
+    productName: order.productName,
+    productType: order.productType,
+    price: order.price || 0,
+    status: order.status,
+    license: order.license || user?.license || null,
+    discordId: order.discordId || user?.discordId || null,
+    username: order.username || user?.globalName || user?.displayName || user?.username || null,
+    email: user?.email || null,
+    note: order.note || '',
+    refunded: Boolean(order.refunded),
+    createdAt: order.createdAt || null,
+    completedAt: order.completedAt || null,
+  };
+}
+
 module.exports = async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -55,7 +87,7 @@ module.exports = async function handler(req, res) {
         users: Object.values(state.users)
           .map(mapUserForAdmin)
           .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
-        orders: state.orders.slice(0, 50),
+        orders: state.orders.slice(0, 50).map((o) => mapOrderForAdmin(state, o)),
       });
     }
 

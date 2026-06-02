@@ -1337,6 +1337,12 @@
     line-height: 1.4;
 }
 
+.admin-order-time {
+    font-size: 0.72rem;
+    color: rgba(234, 240, 255, 0.35);
+    font-weight: 600;
+}
+
 .admin-search {
     min-width: 220px;
     padding: 9px 14px;
@@ -1473,6 +1479,32 @@
     letter-spacing: 0.08em;
     color: rgba(147, 197, 253, 0.8);
     font-weight: 800;
+}
+
+.admin-form-grid-prod {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.admin-field-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: rgba(234, 240, 255, 0.45);
+    font-weight: 500;
+}
+
+.admin-field-hint code {
+    color: #93c5fd;
+}
+
+.admin-form .req {
+    color: #fca5a5;
+}
+
+.admin-form input:required {
+    border-color: rgba(59, 130, 246, 0.35);
 }
 
 .admin-form input,

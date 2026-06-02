@@ -122,19 +122,26 @@
                     <label>Oude prijs <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
                     <label class="span-2">Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
                     <label class="span-2">Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
-                    <div class="admin-form-section span-2">
+                    <div class="admin-form-section span-2" id="prodSectionVehicle">
                         <span>Voertuig (type vehicle)</span>
                     </div>
+                    <div class="admin-form-grid-prod vehicle-fields span-2" id="prodVehicleFields">
                     <label>Spawn model <input name="model" id="prodModel" placeholder="adder"></label>
                     <label>Garage <input name="garage" id="prodGarage" placeholder="pillboxgarage"></label>
                     <label>Topsnelheid <input name="topspeed" id="prodTopspeed" placeholder="282"></label>
                     <label>Kofferbak <input name="trunk" id="prodTrunk" placeholder="100"></label>
                     <label class="span-2">Locatie <input name="location" id="prodLocation" placeholder="Vasteland"></label>
-                    <div class="admin-form-section span-2">
+                    </div>
+                    <div class="admin-form-section span-2" id="prodSectionItem">
                         <span>Item (type item) — ox_inventory</span>
                     </div>
-                    <label>ox item naam <input name="oxItem" id="prodOxItem" placeholder="bread"></label>
-                    <label>Aantal <input name="itemCount" id="prodItemCount" type="number" min="1" placeholder="1"></label>
+                    <div class="admin-form-grid-prod item-fields span-2" id="prodItemFields">
+                    <label class="span-2">ox item naam <strong class="req">*</strong>
+                        <input name="oxItem" id="prodOxItem" placeholder="bread" autocomplete="off">
+                        <span class="admin-field-hint">Exacte naam uit ox_inventory (bijv. <code>water</code>, <code>phone</code>)</span>
+                    </label>
+                    <label>Aantal <input name="itemCount" id="prodItemCount" type="number" min="1" placeholder="1" value="1"></label>
+                    </div>
                     <label class="admin-check span-2"><input type="checkbox" id="prodActive" checked> Product actief in store</label>
                     <button type="submit" class="btn-main span-2">Product opslaan</button>
                 </form>
@@ -198,7 +205,7 @@
             <div class="admin-card-head"><h3>Recente orders</h3></div>
             <div class="admin-table-wrap">
                 <table class="admin-table">
-                    <thead><tr><th>Order</th><th>Product</th><th>Status</th><th>License</th><th></th></tr></thead>
+                        <thead><tr><th>Order</th><th>Koper</th><th>Discord ID</th><th>Product</th><th>Status</th><th></th></tr></thead>
                     <tbody id="orderTable"></tbody>
                 </table>
             </div>
