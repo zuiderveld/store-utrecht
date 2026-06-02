@@ -2,6 +2,7 @@ const { cors, json, readBody, checkBridgeKey } = require('../store/http');
 const { saveState, getState } = require('../store/blob-store');
 const { findUserByLicense, findUserInState, purchaseOne, purchaseCart, mergeOrderMeta, normalizeProductIds } = require('../store/purchase-core');
 const { processPendingDiscordRoleOrders, purchaseMessageForOrder, isDiscordRoleOrder } = require('../store/discord-role-fulfill');
+const { getMaintenanceState, assertStoreOpen } = require('./store-maintenance');
 
 async function runDiscordRoleFulfillment(state) {
   await processPendingDiscordRoleOrders(state);
@@ -41,6 +42,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'catalog' && req.method === 'GET') {
+      const maint = await getMaintenanceState();
+      if (maint.global) {
+        return json(res, 503, {
+          maintenance: true,
+          error: maint.message || 'De URP Store is momenteel in onderhoud. Probeer het later opnieuw.',
+        });
+      }
       const state = await getState();
       const categories = [...state.categories].sort((a, b) => (a.sort || 0) - (b.sort || 0));
       const products = state.products.filter((p) => p.active !== false).map(mapProduct);
@@ -104,6 +112,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'purchase' && req.method === 'POST') {
+      await assertStoreOpen();
       const license = body.license;
       const productId = body.productId;
       if (!license || !productId) return json(res, 400, { error: 'license en productId verplicht' });
@@ -130,6 +139,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'purchase-cart' && req.method === 'POST') {
+      await assertStoreOpen();
       const license = body.license;
       const productIds = normalizeProductIds(body.productIds);
       if (!license || !productIds.length) {

@@ -54,7 +54,7 @@ local function bridgeRequest(method, path, body)
                 err = 'Store API route niet gevonden — check Config.ApiUrl (' .. base .. ')'
             end
             print(('[utrp_store] HTTP %s %s — %s'):format(status, path, raw))
-            p:resolve({ ok = false, error = err })
+            p:resolve({ ok = false, error = err, maintenance = ok and type(data) == 'table' and data.maintenance or nil })
             return
         end
 
@@ -361,12 +361,19 @@ RegisterNetEvent('utrp_store:requestOpen', function()
     end
 
     local catalog = bridgeRequest('GET', '/api/store-bridge?action=catalog', nil)
-    local profile = bridgeRequest('POST', '/api/store-bridge?action=profile', { license = license })
 
-    if not catalog or not catalog.categories then
-        TriggerClientEvent('chat:addMessage', src, { args = { '^1Store', 'Store niet bereikbaar — controleer ApiUrl/ApiKey.' } })
+    if not catalog or catalog.ok == false or catalog.maintenance then
+        local msg = (catalog and catalog.error) or 'Store niet bereikbaar — controleer ApiUrl/ApiKey.'
+        notifyPlayer(src, msg, 'error')
         return
     end
+
+    if not catalog.categories then
+        notifyPlayer(src, 'Store niet bereikbaar — controleer ApiUrl/ApiKey.', 'error')
+        return
+    end
+
+    local profile = bridgeRequest('POST', '/api/store-bridge?action=profile', { license = license })
 
     TriggerClientEvent('utrp_store:openUI', src, {
         categories = catalog.categories,
