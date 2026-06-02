@@ -29,7 +29,12 @@ module.exports = async function handler(req, res) {
         username: discord.username,
         avatarUrl: discord.avatarUrl,
         memberRoleIds: discord.memberRoleIds || [],
-        requiredRoleIds: getAdminRoleIds(),
+        memberRoles: discord.memberRoles || [],
+        requiredRoleIds: discord.requiredRoleIds || [],
+        requiredRoles: discord.requiredRoles || [],
+        configuredRoleTokens: discord.configuredRoleTokens || [],
+        unresolvedRoleTokens: discord.unresolvedRoleTokens || [],
+        guildIdSuffix: discord.guildIdSuffix || null,
       });
     }
 

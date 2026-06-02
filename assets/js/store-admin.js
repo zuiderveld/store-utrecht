@@ -61,6 +61,17 @@
     }
   }
 
+  function formatRoleList(roles, ids) {
+    if (roles && roles.length) {
+      return roles
+        .map(function (r) {
+          return r.name ? r.name + ' (' + r.id + ')' : r.id;
+        })
+        .join(', ');
+    }
+    return (ids || []).join(', ') || 'geen';
+  }
+
   async function refreshAdminAccess() {
     const gateHint = document.getElementById('adminGateHint');
 
@@ -103,12 +114,19 @@
       if (!data.isAdmin) {
         if (gateHint) {
           gateHint.classList.remove('hidden');
+          var unresolved = (data.unresolvedRoleTokens || []).join(', ');
           gateHint.innerHTML =
-            'Geen beheer-rol gevonden op de URP Discord.<br>Vereiste rol-ID(s): <code>' +
-            esc((data.requiredRoleIds || []).join(', ') || 'niet geconfigureerd') +
-            '</code><br>Jouw rol-ID(s): <code>' +
-            esc((data.memberRoleIds || []).join(', ') || 'geen') +
-            '</code>';
+            'Geen beheer-rol gevonden op de URP Discord (server …' +
+            esc(data.guildIdSuffix || '??????') +
+            ').<br><strong>Vereist:</strong> ' +
+            esc(formatRoleList(data.requiredRoles, data.requiredRoleIds)) +
+            '<br><strong>Jouw rollen:</strong> ' +
+            esc(formatRoleList(data.memberRoles, data.memberRoleIds)) +
+            (unresolved
+              ? '<br><strong>Let op:</strong> in Vercel staan onbekende rolnamen: <code>' +
+                esc(unresolved) +
+                '</code> — gebruik rol-ID of exacte Discord-rolnaam.'
+              : '');
         }
         showGate(true);
         showToast('Geen store-beheer rol op Discord.');
