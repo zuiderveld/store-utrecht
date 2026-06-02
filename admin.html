@@ -33,16 +33,18 @@
     <div class="admin-gate-card">
         <div class="admin-gate-icon">🔐</div>
         <h2>Store beheer</h2>
-        <p>Log in met je beheer-account (apart van de store voor spelers).</p>
+        <p>Zelfde principe als het <a href="https://staff-utrecht.vercel.app/dashboard.html" target="_blank" rel="noopener">staff-portaal</a>: Discord-rol <strong>Store Beheer</strong>, of een beheer-wachtwoord.</p>
         <p class="admin-gate-hint hidden" id="adminGateHint"></p>
+        <button type="button" class="btn-main admin-discord-btn" id="btnDiscordLogin">Inloggen met Discord</button>
+        <p class="admin-login-or">of met beheer-wachtwoord</p>
         <form id="adminLoginForm" class="admin-login-form">
             <label>Gebruikersnaam
-                <input name="username" id="adminUser" type="text" autocomplete="username" required placeholder="admin">
+                <input name="username" id="adminUser" type="text" autocomplete="username" placeholder="admin">
             </label>
             <label>Wachtwoord
-                <input name="password" id="adminPass" type="password" autocomplete="current-password" required>
+                <input name="password" id="adminPass" type="password" autocomplete="current-password">
             </label>
-            <button type="submit" class="btn-main" id="btnLoginGate">Inloggen</button>
+            <button type="submit" class="btn-outline" id="btnLoginGate">Inloggen met wachtwoord</button>
         </form>
     </div>
 </div>

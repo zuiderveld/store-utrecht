@@ -12,25 +12,71 @@ function getConfiguredAdminUser() {
   return String(process.env.STORE_ADMIN_USER || 'admin').trim() || 'admin';
 }
 
-function verifyAdminCredentials(username, password) {
-  const expectedPass = process.env.STORE_ADMIN_PASSWORD || '';
-  const expectedUser = getConfiguredAdminUser();
+function parseAdminUserEntries() {
+  const map = new Map();
 
-  if (!expectedPass) {
-    throw new Error('STORE_ADMIN_PASSWORD ontbreekt in Vercel environment variables.');
+  const multi = process.env.STORE_ADMIN_USERS;
+  if (multi != null && String(multi).trim()) {
+    String(multi)
+      .split(/[,;\n]+/)
+      .forEach((entry) => {
+        const line = entry.trim();
+        if (!line) return;
+        const idx = line.indexOf(':');
+        if (idx <= 0) return;
+        const user = line.slice(0, idx).trim();
+        const pass = line.slice(idx + 1);
+        if (!user || !pass) return;
+        map.set(user.toLowerCase(), { user, pass });
+      });
   }
 
-  const userOk = String(username || '').trim() === expectedUser;
-  if (!userOk) return false;
+  const singlePass = process.env.STORE_ADMIN_PASSWORD || '';
+  const singleUser = getConfiguredAdminUser();
+  if (singlePass) {
+    map.set(singleUser.toLowerCase(), { user: singleUser, pass: singlePass });
+  }
 
+  return map;
+}
+
+function hasAdminAccounts() {
+  return parseAdminUserEntries().size > 0;
+}
+
+function getAdminUsernames() {
+  return [...parseAdminUserEntries().values()].map((e) => e.user);
+}
+
+function safeEqual(a, b) {
   try {
-    const a = Buffer.from(String(password || ''));
-    const b = Buffer.from(String(expectedPass));
-    if (a.length !== b.length) return false;
-    return crypto.timingSafeEqual(a, b);
+    const left = Buffer.from(String(a));
+    const right = Buffer.from(String(b));
+    if (left.length !== right.length) return false;
+    return crypto.timingSafeEqual(left, right);
   } catch {
     return false;
   }
+}
+
+function verifyAdminCredentials(username, password) {
+  const entries = parseAdminUserEntries();
+  if (!entries.size) {
+    throw new Error(
+      'Geen admin accounts — zet STORE_ADMIN_USERS of STORE_ADMIN_PASSWORD in Vercel.'
+    );
+  }
+
+  const key = String(username || '').trim().toLowerCase();
+  const entry = entries.get(key);
+  if (!entry) return false;
+
+  return safeEqual(password, entry.pass);
+}
+
+function resolveAdminUsername(username) {
+  const key = String(username || '').trim().toLowerCase();
+  return parseAdminUserEntries().get(key)?.user || String(username || '').trim();
 }
 
 function createAdminSessionToken() {
@@ -39,15 +85,18 @@ function createAdminSessionToken() {
 
 async function createAdminSession(username) {
   const token = createAdminSessionToken();
+  const displayName = resolveAdminUsername(username) || getConfiguredAdminUser();
+
   await saveState((state) => {
     if (!state.adminSessions) state.adminSessions = {};
     state.adminSessions[token] = {
-      username: username || getConfiguredAdminUser(),
+      username: displayName,
       expiresAt: Date.now() + ADMIN_TTL_MS,
       createdAt: Date.now(),
     };
     return state;
   });
+
   return token;
 }
 
@@ -105,4 +154,6 @@ module.exports = {
   revokeAdminSession,
   requireAdminAuth,
   getConfiguredAdminUser,
+  getAdminUsernames,
+  hasAdminAccounts,
 };

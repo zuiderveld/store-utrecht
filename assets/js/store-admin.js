@@ -62,7 +62,14 @@
   function updateAdminHeader() {
     if (!isAdminLoggedIn()) return;
     document.getElementById('adminUserName').textContent = adminUserName();
-    document.getElementById('adminAvatar').style.display = 'none';
+    const avatar = sessionStorage.getItem('urpAdminAvatarUrl');
+    const img = document.getElementById('adminAvatar');
+    if (avatar) {
+      img.src = avatar;
+      img.style.display = 'block';
+    } else {
+      img.style.display = 'none';
+    }
   }
 
   function openAdminApp() {
@@ -596,11 +603,41 @@
     };
   }
 
+  var btnDiscordLogin = document.getElementById('btnDiscordLogin');
+  if (btnDiscordLogin) {
+    btnDiscordLogin.onclick = openAdminDiscordLogin;
+  }
+
   btnLogout.onclick = function () {
     adminLogout();
   };
 
   (async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+
+    if (code) {
+      setGateHint('Discord login verwerken…');
+      window.history.replaceState({}, '', '/admin.html');
+      try {
+        await adminDiscordLoginWithCode(code);
+        openAdminApp();
+        await loadSnapshot();
+        syncProductTypeFields();
+        showToast('Ingelogd via Discord');
+        return;
+      } catch (err) {
+        var hint = err.message || 'Discord login mislukt';
+        if (err.details && err.details.discordId) {
+          hint +=
+            ' — rol Store Beheer (1502448726676078704) op server 1416816652644909109 nodig.';
+        }
+        setGateHint(hint);
+        showToast(hint);
+        showGate(true);
+      }
+    }
+
     try {
       var health = await fetch(window.STORE_CONFIG.apiBase + '/api/health');
       if (!health.ok) throw new Error('API offline');
@@ -620,11 +657,12 @@
       });
       if (!cfg.passwordConfigured) {
         setGateHint(
-          'STORE_ADMIN_PASSWORD ontbreekt in Vercel. Zet een sterk wachtwoord in Environment Variables en redeploy.'
+          'Geen admin accounts — zet STORE_ADMIN_USERS of STORE_ADMIN_PASSWORD in Vercel en redeploy.'
         );
-      } else if (cfg.usernameHint) {
-        var userInput = document.getElementById('adminUser');
-        if (userInput && !userInput.value) userInput.placeholder = cfg.usernameHint;
+      } else if (cfg.multiUser) {
+        setGateHint(
+          'Meerdere beheerders: log in met jouw eigen gebruikersnaam en wachtwoord.'
+        );
       }
     } catch (e) {
       /* config optioneel */

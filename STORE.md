@@ -16,6 +16,7 @@ Voeg redirect URIs toe voor je OAuth-app:
 
 - `https://store.utrechtroleplay.eu/`
 - `https://store.utrechtroleplay.eu/admin.html`
+- `https://store.utrechtroleplay.eu/admin.html`
 - (lokaal) `http://localhost:3000/` en `http://localhost:3000/admin.html`
 
 Scopes: `identify guilds guilds.members.read`
@@ -28,11 +29,11 @@ Scopes: `identify guilds guilds.members.read`
 | `DISCORD_CLIENT_SECRET` | Ja | Zelfde Discord-app als staff |
 | `DISCORD_BOT_TOKEN` | Ja | Bot moet op URP Discord staan |
 | `DISCORD_GUILD_ID` | Ja | **`1416816652644909109`** (URP Discord) |
-| `STORE_ADMIN_USER` | Nee | Admin login gebruikersnaam (default `admin`) |
-| `STORE_ADMIN_PASSWORD` | Ja | Wachtwoord voor `/admin.html` |
+| `STORE_ADMIN_USER` + `STORE_ADMIN_PASSWORD` | Nee | Eén admin-account |
+| `STORE_ADMIN_USERS` | Nee | Meerdere accounts: `naam:ww,naam2:ww2` |
 | `STORE_BRIDGE_API_KEY` | Ja | Zelfde als FiveM `config.lua` |
 
-**Admin** gebruikt **wachtwoord** (`STORE_ADMIN_*`), niet Discord rollen.
+**Admin:** eigen login per beheerder (`STORE_ADMIN_USERS` of enkel wachtwoord).
 
 ## Inloggen
 
@@ -88,21 +89,17 @@ Map: `fivem-resources/utrp_store/`
 
 ## Admin (`/admin.html`)
 
-**Aparte login** — geen Discord rollen meer nodig.
+**Twee manieren inloggen** (los van spelers-store):
 
-| Vercel variabele | Beschrijving |
-|------------------|--------------|
-| `STORE_ADMIN_USER` | Gebruikersnaam (default: `admin`) |
-| `STORE_ADMIN_PASSWORD` | Sterk wachtwoord — **verplicht** |
+1. **Discord** — rol **Store Beheer** (`1502448726676078704`), zelfde idee als [staff-portaal](https://staff-utrecht.vercel.app/dashboard.html)
+2. **Wachtwoord** — `STORE_ADMIN_USERS` of `STORE_ADMIN_PASSWORD` in Vercel
 
-1. Zet beide in Vercel → redeploy  
-2. Ga naar `/admin.html`  
-3. Log in met gebruikersnaam + wachtwoord  
+### Vercel (store-project, niet staff-project!)
 
-Sessie duurt 12 uur. Store-spelers login (Discord/e-mail) is **los** hiervan.
+Kopieer van staff-portaal: `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`  
+Zet **`DISCORD_GUILD_ID=1416816652644909109`** (URP Discord waar Store Beheer rol staat)
 
-- Categorieën / producten / coins beheren  
-- Voertuig-product: type `vehicle`, meta `model` + garage ID  
+Staff en store zijn **aparte Vercel-projecten** — env vars worden niet gedeeld.
 
 ## API (bridge)
 

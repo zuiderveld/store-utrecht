@@ -4,8 +4,10 @@ const {
   createAdminSession,
   resolveAdminSession,
   revokeAdminSession,
-  getConfiguredAdminUser,
+  getAdminUsernames,
+  hasAdminAccounts,
 } = require('../store/admin-auth');
+const { exchangeCode, verifyStoreMember } = require('../store/discord-store');
 
 function bearerToken(req) {
   const header = req.headers.authorization;
@@ -21,6 +23,40 @@ module.exports = async function handler(req, res) {
   try {
     const body = await readBody(req);
     const action = body.action || req.query?.action;
+
+    if (action === 'discord-login') {
+      const code = body.code;
+      const redirectUri = body.redirectUri;
+      if (!code || !redirectUri) {
+        return json(res, 400, { error: 'Discord code ontbreekt — probeer opnieuw.' });
+      }
+
+      const discordAccess = await exchangeCode(code, redirectUri);
+      const discord = await verifyStoreMember(discordAccess);
+
+      if (!discord.isAdmin) {
+        return json(res, 403, {
+          error: 'Geen Store Beheer rol op Discord.',
+          isAdmin: false,
+          discordId: discord.discordId,
+          username: discord.username,
+          requiredRoleIds: discord.requiredRoleIds,
+          memberRoleIds: discord.memberRoleIds,
+          memberRoles: discord.memberRoles,
+          guildIdSuffix: discord.guildIdSuffix,
+        });
+      }
+
+      const accessToken = await createAdminSession(discord.username);
+      return json(res, 200, {
+        ok: true,
+        username: discord.username,
+        avatarUrl: discord.avatarUrl,
+        discordId: discord.discordId,
+        accessToken,
+        loginMethod: 'discord',
+      });
+    }
 
     if (action === 'login') {
       const username = String(body.username || '').trim();
@@ -64,10 +100,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'config') {
+      const usernames = getAdminUsernames();
       return json(res, 200, {
         ok: true,
-        usernameHint: getConfiguredAdminUser(),
-        passwordConfigured: Boolean(process.env.STORE_ADMIN_PASSWORD),
+        usernames,
+        usernameHint: usernames[0] || 'admin',
+        passwordConfigured: hasAdminAccounts(),
+        multiUser: usernames.length > 1,
       });
     }
 
