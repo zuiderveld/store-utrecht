@@ -74,37 +74,6 @@ local function bridgeRequest(method, path, body)
     return Citizen.Await(p)
 end
 
-local function giveVehicle(license, model, garage)
-    local plate = randomPlate()
-    local vehicleProps = {
-        model = model,
-        plate = plate,
-    }
-    local vehicleJson = json.encode(vehicleProps)
-    local parking = garage or Config.DefaultGarage
-
-    MySQL.insert.await(([[
-        INSERT INTO %s (%s, %s, %s, %s, %s, %s)
-        VALUES (?, ?, ?, 'car', ?, ?)
-    ]]):format(
-        Config.VehicleTable,
-        Config.OwnerColumn,
-        Config.PlateColumn,
-        Config.VehicleColumn,
-        Config.TypeColumn,
-        Config.StoredColumn,
-        Config.ParkingColumn
-    ), {
-        license,
-        plate,
-        vehicleJson,
-        Config.StoredInGarage,
-        parking,
-    })
-
-    return plate
-end
-
 local function notifyPlayer(src, msg, ntype)
     if GetResourceState('ox_lib') == 'started' then
         TriggerClientEvent('ox_lib:notify', src, {
@@ -126,6 +95,102 @@ local function getSourceByLicense(license)
         end
     end
     return nil
+end
+
+local function resolveModelHash(model)
+    if type(model) == 'number' then return model end
+    local name = tostring(model or ''):lower():gsub('%s+', '')
+    if name == '' then return nil end
+    if Config.VehicleUseHash == false then return name end
+    return joaat(name)
+end
+
+local function resolveOwner(license)
+    if not license then return nil end
+
+    local src = getSourceByLicense(license)
+    if (Config.OwnerFormat == 'esx' or Config.OwnerFormat == 'auto') and src then
+        local xPlayer = ESX.GetPlayerFromId(src)
+        if xPlayer and xPlayer.identifier then
+            return xPlayer.identifier
+        end
+    end
+
+    if Config.OwnerFormat == 'plain' then
+        return license:gsub('^license:', '')
+    end
+
+    return license
+end
+
+local function giveVehicle(license, model, garage)
+    local modelHash = resolveModelHash(model)
+    if not modelHash then
+        error('invalid_vehicle_model: ' .. tostring(model))
+    end
+
+    local owner = resolveOwner(license)
+    if not owner then
+        error('invalid_owner')
+    end
+
+    local plate = randomPlate()
+    local vehicleProps = {
+        model = modelHash,
+        plate = plate,
+        bodyHealth = 1000.0,
+        engineHealth = 1000.0,
+        tankHealth = 1000.0,
+        fuelLevel = 100.0,
+        dirtLevel = 0.0,
+    }
+    local vehicleJson = json.encode(vehicleProps)
+    local parking = garage or Config.DefaultGarage
+
+    if Config.UseParkingColumn == false then
+        MySQL.insert.await(([[
+            INSERT INTO %s (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, 'car', ?)
+        ]]):format(
+            Config.VehicleTable,
+            Config.OwnerColumn,
+            Config.PlateColumn,
+            Config.VehicleColumn,
+            Config.TypeColumn,
+            Config.StoredColumn
+        ), {
+            owner,
+            plate,
+            vehicleJson,
+            Config.StoredInGarage,
+        })
+    else
+        MySQL.insert.await(([[
+            INSERT INTO %s (%s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, 'car', ?, ?)
+        ]]):format(
+            Config.VehicleTable,
+            Config.OwnerColumn,
+            Config.PlateColumn,
+            Config.VehicleColumn,
+            Config.TypeColumn,
+            Config.StoredColumn,
+            Config.ParkingColumn
+        ), {
+            owner,
+            plate,
+            vehicleJson,
+            Config.StoredInGarage,
+            parking,
+        })
+    end
+
+    local src = getSourceByLicense(license)
+    if src then
+        notifyPlayer(src, ('Voertuig ontvangen! Kenteken %s — check je garage.'):format(plate))
+    end
+
+    return plate
 end
 
 local function giveStoreItem(order)
@@ -268,14 +333,15 @@ local function processOrders()
 
         if order.productType == 'vehicle' and order.meta and order.meta.model then
             local garage = order.meta.garage or Config.DefaultGarage
-            local ok, plate = pcall(giveVehicle, order.license, order.meta.model, garage)
-            if ok and plate then
+            local ok, result = pcall(giveVehicle, order.license, order.meta.model, garage)
+            if ok and result then
                 done = true
-                note = 'plate:' .. plate
-                print(('[utrp_store] Voertuig %s -> %s (%s)'):format(order.meta.model, order.license, plate))
+                note = 'plate:' .. result
+                print(('[utrp_store] Voertuig %s -> %s (%s)'):format(order.meta.model, order.license, result))
             else
+                done = false
                 note = 'db_error'
-                print('[utrp_store] Garage insert mislukt voor order ' .. order.id)
+                print(('[utrp_store] Garage insert mislukt order %s — %s'):format(order.id, tostring(result)))
             end
         elseif order.productType == 'item' or (order.meta and (order.meta.item or order.meta.oxItem)) then
             local ok, resultNote = giveStoreItem(order)

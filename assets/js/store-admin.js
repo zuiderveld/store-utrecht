@@ -287,11 +287,17 @@
               statusBadge(o.status) +
               '</td><td class="mono">' +
               esc(o.license ? o.license.replace('license:', '').slice(0, 12) + '…' : '—') +
+              '</td><td>' +
+              (o.status === 'failed'
+                ? '<button type="button" class="btn-sm btn-sm-edit" data-requeue-order="' +
+                  esc(o.id) +
+                  '">Opnieuw</button>'
+                : '—') +
               '</td></tr>'
             );
           })
           .join('')
-      : emptyRow(4, 'Nog geen orders');
+      : emptyRow(5, 'Nog geen orders');
   }
 
   document.getElementById('formCategory').onsubmit = async function (e) {
@@ -425,6 +431,17 @@
     const editProd = e.target.dataset.editProd;
     const delProd = e.target.dataset.delProd;
     const editUser = e.target.dataset.editUser;
+    const requeueOrder = e.target.dataset.requeueOrder;
+
+    if (requeueOrder) {
+      try {
+        await adminApi({ action: 'order-requeue', id: requeueOrder });
+        showToast('Order opnieuw in wachtrij — speler moet online zijn voor items');
+        await loadSnapshot();
+      } catch (err) {
+        showToast(err.message);
+      }
+    }
 
     if (editUser) {
       const u = snapshot.users.find(function (x) {

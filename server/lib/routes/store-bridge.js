@@ -1,6 +1,6 @@
 const { cors, json, readBody, checkBridgeKey } = require('../store/http');
 const { saveState, getState } = require('../store/blob-store');
-const { findUserByLicense, findUserInState, purchaseOne, purchaseCart } = require('../store/purchase-core');
+const { findUserByLicense, findUserInState, purchaseOne, purchaseCart, mergeOrderMeta } = require('../store/purchase-core');
 
 function mapProduct(p) {
   return {
@@ -167,9 +167,10 @@ module.exports = async function handler(req, res) {
           id: o.id,
           license: o.license,
           identifiers: o.identifiers,
+          productId: o.productId,
           productType: o.productType,
           productName: o.productName,
-          meta: o.meta,
+          meta: mergeOrderMeta(state, o),
           createdAt: o.createdAt,
         }));
       return json(res, 200, { orders: pending });
@@ -187,6 +188,19 @@ module.exports = async function handler(req, res) {
         order.status = status;
         order.completedAt = Date.now();
         order.note = body.note || '';
+
+        if (status === 'failed') {
+          const user =
+            findUserByLicense(state, order.license) ||
+            (order.discordId && state.users[order.discordId]) ||
+            Object.values(state.users || {}).find((u) => u.license === order.license);
+          if (user) {
+            user.coins = (Number(user.coins) || 0) + (Number(order.price) || 0);
+            user.updatedAt = Date.now();
+            order.refunded = true;
+          }
+        }
+
         return state;
       });
 

@@ -100,6 +100,12 @@ module.exports = async function handler(req, res) {
           const idx = state.products.findIndex((p) => p.id === pid);
           if (idx >= 0) state.products[idx] = { ...state.products[idx], ...row };
           else state.products.push(row);
+          if (row.type === 'vehicle' && !row.meta?.model) {
+            throw new Error('Voertuig vereist spawn model (meta.model, bijv. adder)');
+          }
+          if (row.type === 'item' && !row.meta?.item) {
+            throw new Error('Item vereist ox item naam (meta.item, bijv. bread)');
+          }
           result.product = row;
           break;
         }
@@ -147,6 +153,17 @@ module.exports = async function handler(req, res) {
           user.coins = (Number(user.coins) || 0) + add;
           user.updatedAt = Date.now();
           result.user = mapUserForAdmin(user);
+          break;
+        }
+        case 'order-requeue': {
+          const { id } = body;
+          const order = state.orders.find((o) => o.id === id);
+          if (!order) throw new Error('Order niet gevonden');
+          if (order.status !== 'failed') throw new Error('Alleen mislukte orders opnieuw proberen');
+          order.status = 'pending';
+          order.note = 'requeued_by_admin';
+          delete order.completedAt;
+          result.order = order;
           break;
         }
         default:

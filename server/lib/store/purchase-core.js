@@ -23,6 +23,22 @@ function getProduct(state, productId) {
   return state.products.find((p) => p.id === productId && p.active !== false) || null;
 }
 
+function validateProductMeta(product) {
+  const type = product.type || 'item';
+  const meta = product.meta || {};
+  if (type === 'vehicle' && !meta.model) {
+    throw new Error('Voertuig-product mist spawn model — admin: vul meta.model in (bijv. adder)');
+  }
+  if (type === 'item' && !meta.item) {
+    throw new Error('Item-product mist ox item naam — admin: vul meta.item in (bijv. bread)');
+  }
+}
+
+function mergeOrderMeta(state, order) {
+  const product = order.productId ? getProduct(state, order.productId) : null;
+  return { ...(product?.meta || {}), ...(order.meta || {}) };
+}
+
 function createOrder(user, product, price) {
   return {
     id: 'ord_' + crypto.randomBytes(8).toString('hex'),
@@ -42,6 +58,7 @@ function createOrder(user, product, price) {
 function purchaseOne(state, user, productId) {
   const product = getProduct(state, productId);
   if (!product) throw new Error('Product niet gevonden');
+  validateProductMeta(product);
   if (!user.license) throw new Error('FiveM account niet gekoppeld — gebruik /koppelstore in-game');
   if (!user.discordId) throw new Error('Discord account niet gekoppeld');
 
@@ -70,6 +87,7 @@ function purchaseCart(state, user, productIds) {
   const products = unique.map((id) => {
     const p = getProduct(state, id);
     if (!p) throw new Error('Product niet gevonden: ' + id);
+    validateProductMeta(p);
     return p;
   });
 
@@ -99,4 +117,6 @@ module.exports = {
   findUserInState,
   purchaseOne,
   purchaseCart,
+  mergeOrderMeta,
+  validateProductMeta,
 };
