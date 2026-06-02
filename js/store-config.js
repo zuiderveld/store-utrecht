@@ -10,7 +10,12 @@ window.STORE_CONFIG = {
 };
 
 function discordRedirectUri() {
-  return window.location.origin + window.location.pathname;
+  const path = window.location.pathname || '/';
+  if (path.includes('admin')) {
+    return window.location.origin + '/admin.html';
+  }
+  // Discord: registreer exact deze URL (zonder index.html)
+  return window.location.origin + '/';
 }
 
 window.storeRedirectUri = discordRedirectUri;

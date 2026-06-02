@@ -54,8 +54,17 @@ Zie `.env.example` — kopieer **`DISCORD_CLIENT_SECRET`**, **`DISCORD_BOT_TOKEN
 
 ## 4. Discord OAuth redirects
 
+Voeg **exact** deze URLs toe in [Discord Developer Portal](https://discord.com/developers/applications) → OAuth2 → Redirects:
+
+**Vercel (tijdelijk):**
+- `https://store-utrecht.vercel.app/`
+- `https://store-utrecht.vercel.app/admin.html`
+
+**Eigen domein (later):**
 - `https://store.utrechtroleplay.eu/`
 - `https://store.utrechtroleplay.eu/admin.html`
+
+Geen `/index.html` — Discord moet **exact** matchen (inclusief trailing slash bij `/`).
 
 ## 5. FiveM
 

@@ -126,7 +126,8 @@ async function handleStoreOAuthCallback() {
   }
 
   const data = await discordStoreAuthWithCode(code, linkUserId);
-  window.history.replaceState({}, '', window.location.pathname);
+  const clean = window.location.pathname.includes('admin') ? '/admin.html' : '/';
+  window.history.replaceState({}, '', clean);
   return data;
 }
 
