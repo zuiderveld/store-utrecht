@@ -1101,6 +1101,7 @@
     margin-top: -12px;
     margin-bottom: 20px;
     line-height: 1.55;
+    white-space: pre-line;
 }
 
 .admin-gate-hint code {

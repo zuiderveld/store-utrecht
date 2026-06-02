@@ -20,8 +20,8 @@ Config.StoredInGarage = 1
 -- owner: 'esx' = identifier van online speler, 'license' = license:xxx, 'plain' = zonder prefix
 Config.OwnerFormat = 'esx'
 Config.VehicleUseHash = true
--- Zet op false als je owned_vehicles geen parking/garage kolom heeft
-Config.UseParkingColumn = true
+-- Zet op false als owned_vehicles geen parking-kolom heeft (veel ESX servers)
+Config.UseParkingColumn = false
 
 -- ESX: owned_vehicles — pas kolommen aan als jouw server afwijkt
 Config.VehicleTable = 'owned_vehicles'

@@ -42,9 +42,18 @@
   function showGate(show) {
     adminGate.classList.toggle('hidden', !show);
     adminApp.classList.toggle('hidden', show);
-    btnLogin.style.display = show ? 'inline-flex' : 'none';
-    btnLogout.classList.toggle('hidden', show);
-    adminSession.classList.toggle('hidden', show);
+    var loggedIn = isStoreLoggedIn();
+    btnLogin.style.display = show && !loggedIn ? 'inline-flex' : 'none';
+    btnLogout.classList.toggle('hidden', !loggedIn);
+    adminSession.classList.toggle('hidden', !loggedIn || show);
+  }
+
+  function setGateHint(text, asHtml) {
+    var gateHint = document.getElementById('adminGateHint');
+    if (!gateHint) return;
+    gateHint.classList.remove('hidden');
+    if (asHtml) gateHint.innerHTML = text;
+    else gateHint.textContent = text;
   }
 
   function updateAdminHeader() {
@@ -76,14 +85,14 @@
     const gateHint = document.getElementById('adminGateHint');
 
     if (!isStoreLoggedIn()) {
-      if (gateHint) {
-        gateHint.classList.remove('hidden');
-        gateHint.textContent =
-          'Je bent nog niet ingelogd op de store-website. Klik op de knop hieronder — alleen inloggen op Discord telt (niet alleen je rol op de server).';
-      }
+      setGateHint(
+        'Stap 1: klik op de blauwe knop hieronder.\nStap 2: keur Discord goed.\nDaarna controleert de site je rol automatisch.'
+      );
       showGate(true);
       return false;
     }
+
+    setGateHint('Beheer-rechten controleren…');
 
     try {
       const headers = { 'Content-Type': 'application/json' };
@@ -664,7 +673,8 @@
 
   function goDiscordLogin() {
     clearStoreSession();
-    window.location.href = getStoreDiscordAuthUrl(storeOAuthReturnUri(), null, 'admin');
+    var uri = window.location.origin + '/admin.html';
+    window.location.href = getStoreDiscordAuthUrl(uri);
   }
 
   btnLogin.onclick = goDiscordLogin;
@@ -679,34 +689,61 @@
       showToast(
         'Discord login mislukt: ' + (params.get('error_description') || params.get('error'))
       );
+      setGateHint(
+        'Discord login mislukt. Voeg in Discord Developer Portal toe:\n' +
+          window.location.origin +
+          '/admin.html'
+      );
       window.history.replaceState({}, '', '/admin.html');
+    }
+
+    if (params.get('code')) {
+      setGateHint('Discord login verwerken…');
+      btnLoginGate.disabled = true;
+    }
+
+    try {
+      var health = await fetch(window.STORE_CONFIG.apiBase + '/api/health');
+      if (!health.ok) throw new Error('API offline');
+    } catch (e) {
+      setGateHint(
+        'Store API werkt niet — deploy op Vercel moet de map server/ bevatten (niet alleen HTML).'
+      );
+      showGate(true);
+      showToast('Backend API niet bereikbaar');
+      return;
     }
 
     try {
       var oauth = await handleStoreOAuthCallback();
-      if (oauth && oauth.isAdmin && oauth.accessToken) {
-        setStoreSession({
-          username: oauth.username,
-          accessToken: oauth.accessToken,
-          isAdmin: true,
-          discordId: oauth.discordId,
-          discordLinked: true,
-          avatarUrl: oauth.avatarUrl,
-          loginMethod: 'discord',
-        });
-        showGate(false);
-        updateAdminHeader();
-        try {
-          await loadSnapshot();
-          syncProductTypeFields();
-        } catch (e) {
-          showToast(e.message);
+      if (oauth && oauth.accessToken) {
+        if (oauth.isAdmin) {
+          setStoreSession({
+            username: oauth.username,
+            accessToken: oauth.accessToken,
+            isAdmin: true,
+            discordId: oauth.discordId,
+            discordLinked: true,
+            avatarUrl: oauth.avatarUrl,
+            loginMethod: 'discord',
+          });
+          showGate(false);
+          updateAdminHeader();
+          try {
+            await loadSnapshot();
+            syncProductTypeFields();
+          } catch (err) {
+            showToast(err.message);
+          }
+          return;
         }
-        return;
       }
     } catch (e) {
+      setGateHint('Login mislukt: ' + e.message);
       showToast(e.message);
     }
+
+    if (btnLoginGate) btnLoginGate.disabled = false;
 
     if (!(await requireAdminPage())) return;
     try {
