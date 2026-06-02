@@ -66,9 +66,10 @@ function avatarUrlFromUser(user) {
 }
 
 function isAdmin(memberRoles) {
-  const adminIds = getAdminRoleIds();
+  const adminIds = getAdminRoleIds().map(String);
   if (!adminIds.length || !memberRoles?.length) return false;
-  return adminIds.some((id) => memberRoles.includes(id));
+  const roles = memberRoles.map(String);
+  return adminIds.some((id) => roles.includes(id));
 }
 
 async function verifyStoreMember(accessToken) {
@@ -89,6 +90,7 @@ async function verifyStoreMember(accessToken) {
     avatarUrl: avatarUrlFromUser(user),
     accessToken,
     isAdmin: isAdmin(memberRoles),
+    memberRoleIds: memberRoles,
   };
 }
 

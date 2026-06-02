@@ -1095,6 +1095,19 @@
     font-size: 0.95rem;
 }
 
+.admin-gate-hint {
+    font-size: 0.85rem;
+    color: rgba(255, 180, 120, 0.95);
+    margin-top: -12px;
+    margin-bottom: 20px;
+    line-height: 1.55;
+}
+
+.admin-gate-hint code {
+    font-size: 0.8rem;
+    word-break: break-all;
+}
+
 .admin-wrap {
     padding: 110px 5% 80px;
     max-width: 1280px;

@@ -1,5 +1,5 @@
 const { cors, json, readBody } = require('../store/http');
-const { exchangeCode, verifyStoreMember } = require('../store/discord-store');
+const { exchangeCode, verifyStoreMember, getAdminRoleIds } = require('../store/discord-store');
 const { upsertDiscordUser, linkDiscordToEmailUser, buildMe } = require('../store/session');
 const { getState } = require('../store/blob-store');
 const { findUser, findUserByDiscordId } = require('../store/auth-sessions');
@@ -12,6 +12,26 @@ module.exports = async function handler(req, res) {
   try {
     const body = await readBody(req);
     let accessToken = body.accessToken;
+
+    if (body.action === 'admin-check') {
+      if (!accessToken) return json(res, 400, { error: 'Geen Discord token — log in met Discord op admin.' });
+      if (String(accessToken).startsWith('urp_')) {
+        return json(res, 403, {
+          error: 'Admin werkt alleen met Discord login, niet met e-mail.',
+          isAdmin: false,
+          requiredRoleIds: getAdminRoleIds(),
+        });
+      }
+      const discord = await verifyStoreMember(accessToken);
+      return json(res, 200, {
+        isAdmin: discord.isAdmin,
+        discordId: discord.discordId,
+        username: discord.username,
+        avatarUrl: discord.avatarUrl,
+        memberRoleIds: discord.memberRoleIds || [],
+        requiredRoleIds: getAdminRoleIds(),
+      });
+    }
 
     if (body.code) {
       if (!body.redirectUri) return json(res, 400, { error: 'redirectUri ontbreekt' });

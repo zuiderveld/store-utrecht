@@ -61,20 +61,80 @@
     }
   }
 
-  function requireAdminPage() {
+  async function refreshAdminAccess() {
+    const gateHint = document.getElementById('adminGateHint');
+
     if (!isStoreLoggedIn()) {
-      sessionStorage.setItem('urpStoreRedirect', '/admin.html');
+      if (gateHint) {
+        gateHint.classList.add('hidden');
+        gateHint.textContent = '';
+      }
       showGate(true);
       return false;
     }
-    if (!isStoreAdmin()) {
+
+    if (storeAccessToken().startsWith('urp_')) {
+      if (gateHint) {
+        gateHint.classList.remove('hidden');
+        gateHint.textContent =
+          'Je bent ingelogd met e-mail. Log uit en gebruik "Inloggen met Discord" — admin werkt niet met e-mail login.';
+      }
       showGate(true);
-      showToast('Geen store-beheer rechten (DISCORD_STORE_ADMIN_ROLES).');
+      showToast('Admin vereist Discord login (niet e-mail).');
       return false;
     }
-    showGate(false);
-    updateAdminHeader();
-    return true;
+
+    try {
+      const data = await storeApi('/api/store-auth', {
+        method: 'POST',
+        body: { action: 'admin-check', accessToken: storeAccessToken() },
+      });
+
+      setStoreSession({
+        username: data.username,
+        accessToken: storeAccessToken(),
+        isAdmin: data.isAdmin,
+        discordId: data.discordId,
+        discordLinked: true,
+        avatarUrl: data.avatarUrl,
+        loginMethod: 'discord',
+      });
+
+      if (!data.isAdmin) {
+        if (gateHint) {
+          gateHint.classList.remove('hidden');
+          gateHint.innerHTML =
+            'Geen beheer-rol gevonden op de URP Discord.<br>Vereiste rol-ID(s): <code>' +
+            esc((data.requiredRoleIds || []).join(', ') || 'niet geconfigureerd') +
+            '</code><br>Jouw rol-ID(s): <code>' +
+            esc((data.memberRoleIds || []).join(', ') || 'geen') +
+            '</code>';
+        }
+        showGate(true);
+        showToast('Geen store-beheer rol op Discord.');
+        return false;
+      }
+
+      if (gateHint) {
+        gateHint.classList.add('hidden');
+        gateHint.textContent = '';
+      }
+      showGate(false);
+      updateAdminHeader();
+      return true;
+    } catch (err) {
+      if (gateHint) {
+        gateHint.classList.remove('hidden');
+        gateHint.textContent = err.message || 'Discord check mislukt.';
+      }
+      showGate(true);
+      showToast(err.message || 'Admin check mislukt');
+      return false;
+    }
+  }
+
+  function requireAdminPage() {
+    return refreshAdminAccess();
   }
 
   function resetCategoryForm() {
@@ -577,7 +637,7 @@
     } catch (e) {
       showToast(e.message);
     }
-    if (!requireAdminPage()) return;
+    if (!(await requireAdminPage())) return;
     try {
       await loadSnapshot();
       syncProductTypeFields();
