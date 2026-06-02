@@ -1,13 +1,14 @@
 Config = {}
 
--- MOET hetzelfde zijn als je live store-URL (waar je op de website inlogt)
-Config.ApiUrl = 'https://store-utrecht.vercel.app'
--- Config.ApiUrl = 'https://store.utrechtroleplay.eu'  -- later eigen domein
+-- Live store-URL (zelfde als waar spelers inloggen op de website)
+-- Overschrijf in server.cfg: set urp_store_api_url "https://jouw-store.vercel.app"
+Config.ApiUrl = GetConvar('urp_store_api_url', 'https://store-utrecht.vercel.app')
 
--- MOET exact gelijk zijn aan STORE_BRIDGE_API_KEY in Vercel (niet de placeholder!)
-Config.ApiKey = 'grp-bridge-change-me'
+-- MOET exact gelijk zijn aan STORE_BRIDGE_API_KEY in Vercel
+-- Overschrijf in server.cfg: set urp_store_api_key "jouw-geheime-key"
+Config.ApiKey = GetConvar('urp_store_api_key', 'grp-bridge-change-me')
 
-Config.StoreWebUrl = 'https://store-utrecht.vercel.app'
+Config.StoreWebUrl = GetConvar('urp_store_web_url', Config.ApiUrl)
 
 Config.OpenCommand = 'store'
 Config.SyncIntervalSeconds = 15

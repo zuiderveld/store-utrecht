@@ -68,12 +68,16 @@ Geen `/index.html` — Discord moet **exact** matchen (inclusief trailing slash 
 
 ## 5. FiveM
 
-`fivem-resources/utrp_store/config.lua`:
+`fivem-resources/utrp_store/` op je game-server. In **`server.cfg`**:
 
-```lua
-Config.ApiUrl = 'https://store.utrechtroleplay.eu'
-Config.ApiKey = '<zelfde als STORE_BRIDGE_API_KEY>'
+```cfg
+set urp_store_api_url "https://store-utrecht.vercel.app"
+set urp_store_api_key "<exact dezelfde waarde als STORE_BRIDGE_API_KEY in Vercel>"
+ensure utrp_store
 ```
+
+Na start: server console **`storebridge`** → moet `Bridge OK` tonen.  
+Zie `fivem-resources/utrp_store/README.md` bij verbindingsfouten.
 
 ## 6. Test
 

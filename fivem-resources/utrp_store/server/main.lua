@@ -28,21 +28,47 @@ local function randomPlate()
 end
 
 local function bridgeRequest(method, path, body)
-    local url = Config.ApiUrl .. path
+    local base = Config.ApiUrl:gsub('/+$', '')
+    local url = base .. path
     local payload = body and json.encode(body) or ''
     local p = promise.new()
 
     PerformHttpRequest(url, function(status, response)
-        local ok, data = pcall(json.decode, response or '{}')
-        if status ~= 200 then
-            print(('[utrp_store] HTTP %s %s — %s'):format(status, path, response or ''))
-            p:resolve(ok and data or { ok = false, error = 'HTTP ' .. tostring(status) })
+        local raw = response or ''
+        local ok, data = pcall(json.decode, raw ~= '' and raw or '{}')
+
+        if status == 0 or status == nil then
+            print(('[utrp_store] Geen HTTP-verbinding naar %s'):format(url))
+            p:resolve({
+                ok = false,
+                error = 'Geen verbinding met store API — server kan ' .. base .. ' niet bereiken (firewall/DNS/verkeerde URL)',
+            })
             return
         end
-        p:resolve(ok and data or nil)
+
+        if status ~= 200 then
+            local err = (ok and type(data) == 'table' and data.error) or ('HTTP ' .. tostring(status))
+            if status == 401 then
+                err = 'API key klopt niet — zet Config.ApiKey gelijk aan STORE_BRIDGE_API_KEY in Vercel'
+            elseif status == 404 then
+                err = 'Store API route niet gevonden — check Config.ApiUrl (' .. base .. ')'
+            end
+            print(('[utrp_store] HTTP %s %s — %s'):format(status, path, raw))
+            p:resolve({ ok = false, error = err })
+            return
+        end
+
+        if not ok or type(data) ~= 'table' then
+            print(('[utrp_store] Ongeldig JSON antwoord op %s — %s'):format(path, raw))
+            p:resolve({ ok = false, error = 'Ongeldig antwoord van store API' })
+            return
+        end
+
+        p:resolve(data)
     end, method, payload, {
         ['Content-Type'] = 'application/json',
         ['X-Bridge-Key'] = Config.ApiKey,
+        ['User-Agent'] = 'utrp_store/1.0',
     })
 
     return Citizen.Await(p)
@@ -104,10 +130,7 @@ RegisterCommand('koppelstore', function(source, args)
     if data and data.ok then
         TriggerClientEvent('chat:addMessage', source, { args = { '^2Store', 'FiveM account gekoppeld aan de URP Store!' } })
     else
-        local msg = (data and data.error) or 'Geen verbinding met store API'
-        if msg:find('bridge') or msg:find('401') or msg:find('Ongeldige') then
-            msg = 'Store API key/URL fout — check config.lua + Vercel STORE_BRIDGE_API_KEY'
-        end
+        local msg = (data and data.error) or 'Onbekende store API fout'
         TriggerClientEvent('chat:addMessage', source, { args = { '^1Store', 'Koppelen mislukt: ' .. msg } })
     end
 end, false)
@@ -219,12 +242,26 @@ end)
 
 CreateThread(function()
     Wait(3000)
+    if Config.ApiKey == 'grp-bridge-change-me' or Config.ApiKey == '' then
+        print('^1[utrp_store] WAARSCHUWING: ApiKey is nog de placeholder — koppel niet met Vercel STORE_BRIDGE_API_KEY^0')
+    end
+    print(('[utrp_store] Bridge URL: %s'):format(Config.ApiUrl:gsub('/+$', '')))
     local health = bridgeRequest('GET', '/api/store-bridge?action=health', nil)
     if health and health.ok then
-        print(('[utrp_store] Bridge OK (%s) — pending orders: %s'):format(Config.ApiUrl, tostring(health.pending or 0)))
+        print(('[utrp_store] Bridge OK — pending orders: %s'):format(tostring(health.pending or 0)))
     else
         local err = health and health.error or 'geen antwoord'
-        print(('[utrp_store] ^1Bridge FOUT (%s) — %s^0'):format(Config.ApiUrl, err))
-        print('[utrp_store] ^1Check Config.ApiUrl en Config.ApiKey (STORE_BRIDGE_API_KEY in Vercel)^0')
+        print(('[utrp_store] ^1Bridge FOUT — %s^0'):format(err))
+        print('[utrp_store] ^1Fix: server.cfg → set urp_store_api_url + set urp_store_api_key (zelfde als Vercel)^0')
     end
 end)
+
+RegisterCommand('storebridge', function(source)
+    if source ~= 0 then return end
+    local health = bridgeRequest('GET', '/api/store-bridge?action=health', nil)
+    if health and health.ok then
+        print(('[utrp_store] OK — pending: %s'):format(tostring(health.pending or 0)))
+    else
+        print(('[utrp_store] FOUT — %s'):format(health and health.error or 'geen antwoord'))
+    end
+end, true)
