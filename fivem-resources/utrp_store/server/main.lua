@@ -105,6 +105,63 @@ local function giveVehicle(license, model, garage)
     return plate
 end
 
+local function notifyPlayer(src, msg, ntype)
+    if GetResourceState('ox_lib') == 'started' then
+        TriggerClientEvent('ox_lib:notify', src, {
+            title = 'URP Store',
+            description = msg,
+            type = ntype or 'success',
+        })
+        return
+    end
+    TriggerClientEvent('chat:addMessage', src, { args = { '^2Store', msg } })
+end
+
+local function getSourceByLicense(license)
+    if not license then return nil end
+    for _, playerId in ipairs(GetPlayers()) do
+        local src = tonumber(playerId)
+        if src and getLicense(src) == license then
+            return src
+        end
+    end
+    return nil
+end
+
+local function giveStoreItem(order)
+    local meta = order.meta or {}
+    local itemName = meta.item or meta.oxItem or meta.itemName
+    local count = tonumber(meta.count) or 1
+
+    if not itemName or itemName == '' then
+        return false, 'no_item_configured'
+    end
+
+    local src = getSourceByLicense(order.license)
+    if not src then
+        return false, 'player_offline'
+    end
+
+    if Config.UseOxInventory == false then
+        return false, 'ox_disabled'
+    end
+
+    if GetResourceState('ox_inventory') ~= 'started' then
+        print('[utrp_store] ox_inventory niet gestart — kan item niet geven: ' .. itemName)
+        return false, 'ox_missing'
+    end
+
+    local itemMeta = meta.metadata or meta.extra
+    local added = exports.ox_inventory:AddItem(src, itemName, count, itemMeta)
+
+    if added then
+        notifyPlayer(src, ('Je hebt %sx %s ontvangen uit de store.'):format(count, order.productName or itemName))
+        return true, ('item:%s x%d'):format(itemName, count)
+    end
+
+    return false, 'inventory_full'
+end
+
 RegisterCommand('koppelstore', function(source, args)
     if source == 0 then return end
     local raw = table.concat(args, ' ')
@@ -200,7 +257,10 @@ end)
 
 local function processOrders()
     local data = bridgeRequest('GET', '/api/store-bridge?action=pending', nil)
-    if not data or not data.orders then return end
+    if not data or not data.orders then return 0 end
+
+    local count = #data.orders
+    if count == 0 then return 0 end
 
     for _, order in ipairs(data.orders) do
         local done = false
@@ -217,35 +277,73 @@ local function processOrders()
                 note = 'db_error'
                 print('[utrp_store] Garage insert mislukt voor order ' .. order.id)
             end
+        elseif order.productType == 'item' or (order.meta and (order.meta.item or order.meta.oxItem)) then
+            local ok, resultNote = giveStoreItem(order)
+            if ok then
+                done = true
+                note = resultNote
+                print(('[utrp_store] Item %s -> %s'):format(order.productName or '?', order.license))
+            elseif resultNote == 'player_offline' then
+                done = false
+                note = 'waiting_online'
+                -- order blijft pending tot speler online is
+            else
+                done = false
+                note = resultNote
+                print(('[utrp_store] Item mislukt (%s) order %s'):format(resultNote, order.id))
+            end
         else
             done = true
-            note = 'non_vehicle_ack'
+            note = 'non_fulfillment_ack'
         end
 
-        bridgeRequest('POST', '/api/store-bridge?action=complete', {
-            orderId = order.id,
-            status = done and 'done' or 'failed',
-            note = note,
-        })
+        if done or note == 'waiting_online' then
+            if note == 'waiting_online' then
+                -- niet completen — opnieuw proberen bij volgende sync
+            else
+                bridgeRequest('POST', '/api/store-bridge?action=complete', {
+                    orderId = order.id,
+                    status = done and 'done' or 'failed',
+                    note = note,
+                })
+            end
+        else
+            bridgeRequest('POST', '/api/store-bridge?action=complete', {
+                orderId = order.id,
+                status = 'failed',
+                note = note,
+            })
+        end
     end
+
+    return count
 end
 
 CreateThread(function()
+    Wait(8000)
+    pcall(processOrders)
     while true do
-        Wait((Config.SyncIntervalSeconds or 15) * 1000)
-        local ok, err = pcall(processOrders)
+        local pending = 0
+        local ok, err = pcall(function()
+            pending = processOrders() or 0
+        end)
         if not ok then
             print('[utrp_store] processOrders error: ' .. tostring(err))
         end
+        local delay = pending > 0 and (Config.FastSyncSeconds or 3) or (Config.SyncIntervalSeconds or 5)
+        Wait(delay * 1000)
     end
 end)
 
 CreateThread(function()
     Wait(3000)
-    if Config.ApiKey == 'grp-bridge-change-me' or Config.ApiKey == '' then
-        print('^1[utrp_store] WAARSCHUWING: ApiKey is nog de placeholder — koppel niet met Vercel STORE_BRIDGE_API_KEY^0')
+    if Config.ApiKey == '' then
+        print('^1[utrp_store] WAARSCHUWING: ApiKey is leeg — zet urp_store_api_key in server.cfg^0')
     end
+    local key = Config.ApiKey or ''
+    local preview = #key >= 8 and (key:sub(1, 4) .. '...' .. key:sub(-4)) or '(leeg)'
     print(('[utrp_store] Bridge URL: %s'):format(Config.ApiUrl:gsub('/+$', '')))
+    print(('[utrp_store] ApiKey in gebruik: %s (%d tekens)'):format(preview, #key))
     local health = bridgeRequest('GET', '/api/store-bridge?action=health', nil)
     if health and health.ok then
         print(('[utrp_store] Bridge OK — pending orders: %s'):format(tostring(health.pending or 0)))

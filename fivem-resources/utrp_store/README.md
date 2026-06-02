@@ -9,9 +9,11 @@
 
 ```cfg
 set urp_store_api_url "https://store-utrecht.vercel.app"
-set urp_store_api_key "PLAK_HIER_JOUW_STORE_BRIDGE_API_KEY"
+set urp_store_api_key "urp-bridge-utrecht-8Kx2mP9vQ7nR4wT6"
 ensure utrp_store
 ```
+
+(Zie ook `server.cfg.example` in deze map.)
 
 3. **Herstart** de resource of server.
 
@@ -19,6 +21,15 @@ ensure utrp_store
    - `Bridge OK` = verbinding werkt  
    - `API key klopt niet` = key in cfg ≠ Vercel  
    - `kan ... niet bereiken` = firewall/DNS — host moet outbound HTTPS toestaan
+
+## Items (ox_inventory)
+
+Bij product type **item** in admin:
+- **ox item naam** = exacte naam in ox_inventory (bijv. `bread`)
+- **Aantal** = hoeveel stuks
+
+Speler moet **online** zijn op de server — item komt binnen ~3–5 sec in inventory.  
+Offline? Order blijft pending tot je inlogt.
 
 ## Koppelen speler
 

@@ -91,6 +91,8 @@
     document.getElementById('prodOriginalPrice').value = '';
     document.getElementById('prodImage').value = '';
     document.getElementById('prodModel').value = '';
+    document.getElementById('prodOxItem').value = '';
+    document.getElementById('prodItemCount').value = '';
     document.getElementById('prodGarage').value = '';
     document.getElementById('prodTopspeed').value = '';
     document.getElementById('prodTrunk').value = '';
@@ -329,6 +331,8 @@
           topspeed: document.getElementById('prodTopspeed').value.trim(),
           trunk: document.getElementById('prodTrunk').value.trim(),
           location: document.getElementById('prodLocation').value.trim(),
+          item: document.getElementById('prodOxItem').value.trim(),
+          count: document.getElementById('prodItemCount').value.trim() || '1',
         },
       });
       showToast('Product opgeslagen');
@@ -463,6 +467,8 @@
       document.getElementById('prodImage').value = p.image || '';
       document.getElementById('prodDesc').value = p.description || '';
       document.getElementById('prodModel').value = p.meta?.model || '';
+      document.getElementById('prodOxItem').value = p.meta?.item || '';
+      document.getElementById('prodItemCount').value = p.meta?.count || '';
       document.getElementById('prodGarage').value = p.meta?.garage || '';
       document.getElementById('prodTopspeed').value = p.meta?.topspeed || '';
       document.getElementById('prodTrunk').value = p.meta?.trunk || '';

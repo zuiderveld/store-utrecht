@@ -72,7 +72,7 @@ Geen `/index.html` — Discord moet **exact** matchen (inclusief trailing slash 
 
 ```cfg
 set urp_store_api_url "https://store-utrecht.vercel.app"
-set urp_store_api_key "<exact dezelfde waarde als STORE_BRIDGE_API_KEY in Vercel>"
+set urp_store_api_key "urp-bridge-utrecht-8Kx2mP9vQ7nR4wT6"
 ensure utrp_store
 ```
 

@@ -1,17 +1,19 @@
 Config = {}
 
 -- Live store-URL (zelfde als waar spelers inloggen op de website)
--- Overschrijf in server.cfg: set urp_store_api_url "https://jouw-store.vercel.app"
 Config.ApiUrl = GetConvar('urp_store_api_url', 'https://store-utrecht.vercel.app')
 
--- MOET exact gelijk zijn aan STORE_BRIDGE_API_KEY in Vercel
--- Overschrijf in server.cfg: set urp_store_api_key "jouw-geheime-key"
-Config.ApiKey = GetConvar('urp_store_api_key', 'grp-bridge-change-me')
+-- Zelfde waarde als STORE_BRIDGE_API_KEY in Vercel (zie server.cfg.example)
+Config.ApiKey = GetConvar('urp_store_api_key', 'urp-bridge-utrecht-8Kx2mP9vQ7nR4wT6')
 
 Config.StoreWebUrl = GetConvar('urp_store_web_url', Config.ApiUrl)
 
 Config.OpenCommand = 'store'
-Config.SyncIntervalSeconds = 15
+Config.SyncIntervalSeconds = 5
+Config.FastSyncSeconds = 3
+
+-- Items (ox_inventory): meta.item + meta.count op product in admin
+Config.UseOxInventory = true
 Config.DefaultGarage = 'pillboxgarage'
 Config.StoredInGarage = 1
 

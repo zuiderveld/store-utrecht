@@ -123,13 +123,18 @@
                     <label class="span-2">Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
                     <label class="span-2">Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
                     <div class="admin-form-section span-2">
-                        <span>Voertuig / in-game (optioneel)</span>
+                        <span>Voertuig (type vehicle)</span>
                     </div>
                     <label>Spawn model <input name="model" id="prodModel" placeholder="adder"></label>
                     <label>Garage <input name="garage" id="prodGarage" placeholder="pillboxgarage"></label>
                     <label>Topsnelheid <input name="topspeed" id="prodTopspeed" placeholder="282"></label>
                     <label>Kofferbak <input name="trunk" id="prodTrunk" placeholder="100"></label>
                     <label class="span-2">Locatie <input name="location" id="prodLocation" placeholder="Vasteland"></label>
+                    <div class="admin-form-section span-2">
+                        <span>Item (type item) — ox_inventory</span>
+                    </div>
+                    <label>ox item naam <input name="oxItem" id="prodOxItem" placeholder="bread"></label>
+                    <label>Aantal <input name="itemCount" id="prodItemCount" type="number" min="1" placeholder="1"></label>
                     <label class="admin-check span-2"><input type="checkbox" id="prodActive" checked> Product actief in store</label>
                     <button type="submit" class="btn-main span-2">Product opslaan</button>
                 </form>

@@ -23,11 +23,12 @@ async function readBody(req) {
 }
 
 function bridgeKey(req) {
-  return req.headers['x-bridge-key'] || req.query?.key || '';
+  const raw = req.headers['x-bridge-key'] || req.query?.key || '';
+  return String(raw).trim();
 }
 
 function checkBridgeKey(req) {
-  const expected = process.env.STORE_BRIDGE_API_KEY || process.env.GRP_BRIDGE_API_KEY;
+  const expected = String(process.env.STORE_BRIDGE_API_KEY || process.env.GRP_BRIDGE_API_KEY || '').trim();
   if (!expected) return false;
   return bridgeKey(req) === expected;
 }

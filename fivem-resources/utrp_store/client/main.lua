@@ -29,6 +29,7 @@ end)
 RegisterNUICallback('close', function(_, cb)
     isOpen = false
     SetNuiFocus(false, false)
+    SendNUIMessage({ action = 'close' })
     cb({ ok = true })
 end)
 

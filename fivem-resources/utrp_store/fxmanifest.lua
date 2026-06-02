@@ -8,6 +8,12 @@ version '2.0.0'
 
 lua54 'yes'
 
+dependencies {
+    'es_extended',
+    'oxmysql',
+    'ox_inventory',
+}
+
 shared_scripts {
     'config.lua',
 }

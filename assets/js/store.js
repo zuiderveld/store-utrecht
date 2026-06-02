@@ -183,6 +183,7 @@
       loggedBanner.classList.add('hidden');
       sessionMenu.classList.add('hidden');
       closeSessionMenu();
+      stopLiveRefresh();
     }
   }
 
@@ -348,6 +349,89 @@
     renderWidgets();
     renderCategoryTabs();
     renderProducts();
+    lastKnownCoins = catalog.me?.coins ?? null;
+    startLiveRefresh();
+  }
+
+  let liveRefreshTimer = null;
+  let liveFullTimer = null;
+  let lastKnownCoins = null;
+
+  async function refreshLiveData(full) {
+    if (!isStoreLoggedIn()) return;
+    try {
+      const data = await storeApi('/api/store');
+      const prevCoins = catalog.me?.coins;
+      const prevLinked = catalog.me?.linked;
+
+      if (full || !catalog.categories.length) {
+        catalog.categories = data.categories || catalog.categories;
+        catalog.products = data.products || catalog.products;
+        renderCategoryTabs();
+        renderProducts();
+      }
+
+      if (data.me) {
+        catalog.me = data.me;
+        setStoreSession(Object.assign({}, data.me, { accessToken: storeAccessToken() }));
+      }
+      catalog.recentPurchases = data.recentPurchases || catalog.recentPurchases;
+      catalog.topBuyer = data.topBuyer || catalog.topBuyer;
+
+      const newCoins = catalog.me?.coins;
+      if (lastKnownCoins != null && newCoins != null && lastKnownCoins !== newCoins) {
+        sessionChipToggle.classList.remove('coins-updated');
+        void sessionChipToggle.offsetWidth;
+        sessionChipToggle.classList.add('coins-updated');
+      }
+      if (newCoins != null) lastKnownCoins = newCoins;
+
+      updateAuthUI();
+      renderWidgets();
+
+      if (
+        prevCoins !== catalog.me?.coins ||
+        prevLinked !== catalog.me?.linked ||
+        prevLinked !== catalog.me?.fivemLinked
+      ) {
+        renderProducts();
+      }
+    } catch (_) {
+      /* stille retry bij volgende poll */
+    }
+  }
+
+  function startLiveRefresh() {
+    if (liveRefreshTimer) clearInterval(liveRefreshTimer);
+    if (!isStoreLoggedIn()) return;
+
+    liveRefreshTimer = setInterval(function () {
+      refreshLiveData(false);
+    }, 12000);
+
+    liveFullTimer = setInterval(function () {
+      refreshLiveData(true);
+    }, 60000);
+
+    document.addEventListener('visibilitychange', onStoreVisibility);
+  }
+
+  function stopLiveRefresh() {
+    if (liveRefreshTimer) {
+      clearInterval(liveRefreshTimer);
+      liveRefreshTimer = null;
+    }
+    if (liveFullTimer) {
+      clearInterval(liveFullTimer);
+      liveFullTimer = null;
+    }
+    document.removeEventListener('visibilitychange', onStoreVisibility);
+  }
+
+  function onStoreVisibility() {
+    if (document.visibilityState === 'visible' && isStoreLoggedIn()) {
+      refreshLiveData(true);
+    }
   }
 
   async function purchase(productId) {

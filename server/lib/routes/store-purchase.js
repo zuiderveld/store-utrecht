@@ -32,8 +32,8 @@ module.exports = async function handler(req, res) {
       coins: newBalance,
       message:
         order.productType === 'vehicle'
-          ? 'Aankoop geplaatst — voertuig komt automatisch in je garage zodra je online bent (max. enkele minuten).'
-          : 'Aankoop geplaatst — wordt door de server verwerkt.',
+          ? 'Aankoop gelukt — voertuig staat binnen enkele seconden in je garage (open je garage in-game).'
+          : 'Aankoop gelukt — item komt binnen enkele seconden in je ox_inventory (je moet online zijn).',
     });
   } catch (err) {
     console.error('store-purchase:', err);

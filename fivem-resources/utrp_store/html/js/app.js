@@ -15,6 +15,10 @@
   const cartTotal = document.getElementById('cartTotal');
   const confirmModal = document.getElementById('confirmModal');
   const toast = document.getElementById('toast');
+  const storeBackdrop = document.getElementById('storeBackdrop');
+  const coinBalanceEl = document.getElementById('coinBalance');
+
+  let profilePollTimer = null;
 
   let state = {
     categories: [],
@@ -85,10 +89,18 @@
   }
 
   function updateCartUI() {
+    const prev = Number(coinAmount.dataset.value || 0);
+    const next = state.profile.coins ?? 0;
     cartBadge.textContent = state.cart.length;
     cartItems.textContent = state.cart.length;
     cartTotal.textContent = cartTotalCoins() + ' 🪙';
-    coinAmount.textContent = state.profile.coins ?? 0;
+    coinAmount.textContent = next;
+    coinAmount.dataset.value = String(next);
+    if (prev !== next && coinBalanceEl) {
+      coinBalanceEl.classList.remove('updated');
+      void coinBalanceEl.offsetWidth;
+      coinBalanceEl.classList.add('updated');
+    }
 
     cartList.innerHTML = state.cart
       .map((id, idx) => {
@@ -230,6 +242,33 @@
     }
   }
 
+  function closeStore() {
+    confirmModal.classList.add('hidden');
+    app.classList.add('hidden');
+    stopProfilePoll();
+    post('close').catch(function () {});
+  }
+
+  function startProfilePoll() {
+    stopProfilePoll();
+    profilePollTimer = setInterval(async function () {
+      try {
+        const res = await post('refreshProfile');
+        if (res && res.coins != null) {
+          state.profile.coins = res.coins;
+          state.profile.linked = res.linked !== false;
+          updateCartUI();
+        }
+      } catch (_) {}
+    }, 8000);
+  }
+
+  function stopProfilePoll() {
+    if (profilePollTimer) {
+      clearInterval(profilePollTimer);
+      profilePollTimer = null;
+    }
+  }
   function confirmCheckout() {
     if (!state.cart.length) {
       showToast('Winkelwagen is leeg', 'error');
@@ -270,7 +309,8 @@
 
   document.getElementById('btnCart').onclick = () => toggleCart(!state.cartOpen);
   document.getElementById('btnBackShop').onclick = () => toggleCart(false);
-  document.getElementById('btnClose').onclick = () => post('close');
+  document.getElementById('btnClose').onclick = closeStore;
+  if (storeBackdrop) storeBackdrop.onclick = closeStore;
 
   searchInput.addEventListener('input', () => {
     state.search = searchInput.value;
@@ -299,13 +339,15 @@
       updateCartUI();
       renderCategories();
       renderProducts();
+      startProfilePoll();
     }
     if (msg.action === 'close') {
       app.classList.add('hidden');
+      stopProfilePoll();
     }
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') post('close');
+    if (e.key === 'Escape') closeStore();
   });
 })();
