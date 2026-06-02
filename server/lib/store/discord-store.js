@@ -58,7 +58,7 @@ function getBotHeaders() {
 }
 
 function getGuildId() {
-  let guildId = String(process.env.DISCORD_GUILD_ID || '').trim();
+  let guildId = String(process.env.DISCORD_GUILD_ID || rolesFile.guildId || '').trim();
   if (
     (guildId.startsWith('"') && guildId.endsWith('"')) ||
     (guildId.startsWith("'") && guildId.endsWith("'"))
@@ -85,6 +85,56 @@ function isAdminDiscordUser(discordId) {
   const ids = getAdminDiscordIds().map(String);
   if (!ids.length) return false;
   return ids.includes(String(discordId));
+}
+
+/** Waarschuwing: rol-ID per ongeluk in STORE_ADMIN_DISCORD_IDS gezet */
+function getMisconfiguredAllowlistRoleIds() {
+  const allowlist = getAdminDiscordIds().map(String);
+  if (!allowlist.length) return [];
+
+  const roleIdSet = new Set();
+  getAdminRoleTokens().forEach((token) => {
+    const normalized = normalizeRoleToken(token);
+    if (normalized.kind === 'id') roleIdSet.add(normalized.value);
+  });
+  (rolesFile.ranks || []).forEach((rank) => {
+    if (rank.discordRoleId) roleIdSet.add(String(rank.discordRoleId));
+  });
+
+  return allowlist.filter((id) => roleIdSet.has(String(id)));
+}
+
+async function getMemberRolesViaOAuth(accessToken, userId) {
+  if (!accessToken || !userId) return { roles: [], error: 'no_oauth_token' };
+
+  let guildId;
+  try {
+    guildId = getGuildId();
+  } catch (err) {
+    return { roles: [], error: err.message };
+  }
+
+  const res = await fetch(`https://discord.com/api/v10/users/@me/guilds/${guildId}/member`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (res.status === 404) {
+    return { roles: [], error: 'Je zit niet op de URP Discord (OAuth guild check).' };
+  }
+  if (!res.ok) {
+    return {
+      roles: [],
+      error:
+        'OAuth kan je Discord-rollen niet lezen — log opnieuw in (scope guilds.members.read) of fix de bot.',
+    };
+  }
+
+  const data = await res.json();
+  if (String(data.user?.id || '') !== String(userId)) {
+    return { roles: [], error: 'Discord OAuth sessie hoort niet bij dit account.' };
+  }
+
+  return { roles: (data.roles || []).map(String), error: null };
 }
 
 async function getGuildRoles(force = false) {
@@ -190,12 +240,16 @@ function buildAdminAuthPayload(discordId, profile, admin, extras = {}) {
     unresolvedRoleTokens: admin.unresolved,
     guildIdSuffix,
     adminViaUserAllowlist: extras.adminViaUserAllowlist || false,
+    misconfiguredAllowlistRoleIds: extras.misconfiguredAllowlistRoleIds || [],
+    allowlistCount: extras.allowlistCount || 0,
+    roleSource: extras.roleSource || null,
     error: extras.error || null,
   };
 }
 
-async function buildMemberAuthPayload(discordId, profile = {}) {
+async function buildMemberAuthPayload(discordId, profile = {}, options = {}) {
   const id = String(discordId);
+  const misconfiguredAllowlistRoleIds = getMisconfiguredAllowlistRoleIds();
 
   if (isAdminDiscordUser(id)) {
     const admin = await resolveAdminRoleIds();
@@ -204,6 +258,8 @@ async function buildMemberAuthPayload(discordId, profile = {}) {
       isAdmin: true,
       adminViaUserAllowlist: true,
       byId,
+      misconfiguredAllowlistRoleIds,
+      allowlistCount: getAdminDiscordIds().length,
     });
   }
 
@@ -213,13 +269,26 @@ async function buildMemberAuthPayload(discordId, profile = {}) {
   let memberRoles = [];
   let displayName = profile.username || profile.discordUsername;
   let guildError = null;
+  let roleSource = null;
 
   try {
     const member = await getGuildMember(id);
     memberRoles = member.roles || [];
     displayName = member.nick || displayName;
+    roleSource = 'bot';
   } catch (err) {
     guildError = err.message;
+
+    if (options.accessToken) {
+      const oauthMember = await getMemberRolesViaOAuth(options.accessToken, id);
+      if (oauthMember.roles.length) {
+        memberRoles = oauthMember.roles;
+        guildError = null;
+        roleSource = 'oauth';
+      } else if (oauthMember.error && !guildError.includes('Discord server')) {
+        guildError = guildError + ' | OAuth: ' + oauthMember.error;
+      }
+    }
   }
 
   const isAdmin = isAdminWithResolvedIds(memberRoles, admin.roleIds);
@@ -237,6 +306,9 @@ async function buildMemberAuthPayload(discordId, profile = {}) {
       matchedAdminRoleIds,
       byId,
       error: guildError,
+      roleSource,
+      misconfiguredAllowlistRoleIds,
+      allowlistCount: getAdminDiscordIds().length,
     }
   );
 }
@@ -306,8 +378,8 @@ function avatarUrlFromUser(user) {
   return `https://cdn.discordapp.com/embed/avatars/${disc}.png`;
 }
 
-async function verifyStoreMemberByDiscordId(discordId, profile = {}) {
-  return buildMemberAuthPayload(discordId, profile);
+async function verifyStoreMemberByDiscordId(discordId, profile = {}, options = {}) {
+  return buildMemberAuthPayload(discordId, profile, options);
 }
 
 async function verifyStoreMember(accessToken) {
@@ -317,11 +389,15 @@ async function verifyStoreMember(accessToken) {
   if (!userRes.ok) throw new Error('Discord sessie verlopen. Log opnieuw in.');
   const user = await userRes.json();
 
-  const payload = await buildMemberAuthPayload(user.id, {
-    username: user.global_name || user.username,
-    discordUsername: user.username,
-    avatarUrl: avatarUrlFromUser(user),
-  });
+  const payload = await buildMemberAuthPayload(
+    user.id,
+    {
+      username: user.global_name || user.username,
+      discordUsername: user.username,
+      avatarUrl: avatarUrlFromUser(user),
+    },
+    { accessToken }
+  );
 
   return {
     ...payload,
@@ -337,6 +413,28 @@ function createLinkCode() {
   return code;
 }
 
+function getAdminDiagnostics() {
+  let guildIdSuffix = '??????';
+  let guildIdSet = false;
+  try {
+    const guildId = getGuildId();
+    guildIdSet = true;
+    guildIdSuffix = guildId.slice(-6);
+  } catch {
+    /* ok */
+  }
+
+  return {
+    guildIdSuffix,
+    guildIdSet,
+    botTokenSet: Boolean(process.env.DISCORD_BOT_TOKEN),
+    clientSecretSet: Boolean(process.env.DISCORD_CLIENT_SECRET),
+    configuredRoleIds: getAdminRoleTokens(),
+    allowlistCount: getAdminDiscordIds().length,
+    misconfiguredAllowlistRoleIds: getMisconfiguredAllowlistRoleIds(),
+  };
+}
+
 module.exports = {
   getClientId,
   exchangeCode,
@@ -346,4 +444,6 @@ module.exports = {
   getAdminRoleIds,
   getAdminRoleTokens,
   resolveAdminRoleIds,
+  getAdminDiagnostics,
+  getAdminDiscordIds,
 };

@@ -18,20 +18,21 @@ Voeg redirect URIs toe voor je OAuth-app:
 - `https://store.utrechtroleplay.eu/admin.html`
 - (lokaal) `http://localhost:3000/` en `http://localhost:3000/admin.html`
 
-Scopes: `identify guilds` (zelfde als staff-portaal)
+Scopes: `identify guilds guilds.members.read`
 
 ## Vercel Environment Variables
 
-**Gebruik dezelfde waarden als het staff-portaal** (`DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`).
-
-| Variabele | Verplicht | Beschrijving |
-|-----------|-----------|--------------|
-| `BLOB_READ_WRITE_TOKEN` | Ja | Opslag catalogus, users, orders |
-| `DISCORD_CLIENT_SECRET` | Ja | Zelfde als staff |
-| `DISCORD_BOT_TOKEN` | Ja | Zelfde als staff |
-| `DISCORD_GUILD_ID` | Ja | Zelfde als staff |
-| `DISCORD_STORE_ADMIN_ROLES` | Nee | Store-beheer; leeg = Founder/Co-Founder rollen |
+| Variabele | Verplicht | Waarde |
+|-----------|-----------|--------|
+| `BLOB_READ_WRITE_TOKEN` | Ja | Vercel Blob token |
+| `DISCORD_CLIENT_SECRET` | Ja | Zelfde Discord-app als staff |
+| `DISCORD_BOT_TOKEN` | Ja | Bot moet op URP Discord staan |
+| `DISCORD_GUILD_ID` | Ja | **`1416816652644909109`** (URP Discord) |
+| `DISCORD_STORE_ADMIN_ROLES` | Nee | Default in code: **`1502448726676078704`** (Store Beheer) |
+| `STORE_ADMIN_DISCORD_IDS` | Nee | Optioneel: jouw Discord **user-ID** |
 | `STORE_BRIDGE_API_KEY` | Ja | Zelfde als FiveM `config.lua` |
+
+**Belangrijk:** `DISCORD_GUILD_ID` is **niet** het staff-portaal — het is de URP Discord server (`1416816652644909109`).
 
 ## Inloggen
 

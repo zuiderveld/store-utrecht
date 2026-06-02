@@ -32,7 +32,7 @@ window.getStoreDiscordAuthUrl = function (redirectUri, linkUserId, returnTo) {
     client_id: DISCORD_CLIENT_ID,
     redirect_uri: redirectUri || discordRedirectUri(),
     response_type: 'code',
-    scope: 'identify guilds',
+    scope: 'identify guilds guilds.members.read',
   });
   if (linkUserId) params.set('state', 'link:' + linkUserId);
   else if (returnTo === 'admin') params.set('state', 'admin');

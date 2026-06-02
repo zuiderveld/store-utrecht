@@ -1,21 +1,13 @@
-/** Zelfde Discord-app als staff-portaal */
+/** URP Discord + store-beheer rol */
 module.exports = {
   clientId: '1105558581304098867',
-  /** Store-beheer: Founder, Co-Founder + store-beheer rol */
-  beheerRoleIds: [
-    '1502448623252930601',
-    '1502448625366732971',
-    '1502448726676078704',
-  ],
-  /** Optioneel: Discord user-IDs met altijd admin (vul jouw ID in of via Vercel STORE_ADMIN_DISCORD_IDS) */
+  /** Utrecht Roleplay Discord server — moet gelijk zijn aan DISCORD_GUILD_ID in Vercel */
+  guildId: '1416816652644909109',
+  /** Rollen met toegang tot /admin.html */
+  beheerRoleIds: ['1502448726676078704'],
+  /** Optioneel: Discord user-IDs met altijd admin (via Vercel STORE_ADMIN_DISCORD_IDS) */
   adminDiscordIds: [],
   ranks: [
-    { id: 'founder', naam: 'Founder', discordRoleId: '1502448623252930601' },
-    { id: 'co-founder', naam: 'Co-Founder', discordRoleId: '1502448625366732971' },
-    { id: 'beheer-team', naam: 'Beheer Team', discordRoleId: '1502448635709751457' },
-    { id: 'bestuur-team', naam: 'Bestuur Team', discordRoleId: '1502448643041661088' },
-    { id: 'hogerop-team', naam: 'Hogerop Team', discordRoleId: '1502448648930459792' },
     { id: 'store-beheer', naam: 'Store Beheer', discordRoleId: '1502448726676078704' },
-    { id: 'staff', naam: 'Staff', discordRoleId: '1502448659839582230' },
   ],
 };

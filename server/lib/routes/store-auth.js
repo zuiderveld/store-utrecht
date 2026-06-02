@@ -1,5 +1,5 @@
 const { cors, json, readBody } = require('../store/http');
-const { exchangeCode, verifyStoreMember, verifyStoreMemberByDiscordId } = require('../store/discord-store');
+const { exchangeCode, verifyStoreMember, verifyStoreMemberByDiscordId, getAdminDiagnostics } = require('../store/discord-store');
 const { upsertDiscordUser, linkDiscordToEmailUser, buildMe } = require('../store/session');
 const { getState, saveState } = require('../store/blob-store');
 const {
@@ -76,10 +76,18 @@ module.exports = async function handler(req, res) {
     const body = await readBody(req);
     let accessToken = body.accessToken;
 
+    if (body.action === 'admin-diag') {
+      return json(res, 200, { ok: true, ...getAdminDiagnostics() });
+    }
+
     if (body.action === 'admin-check') {
       const token = bearerToken(req, body);
       const result = await performAdminCheck(token);
-      return json(res, result.status, result.body);
+      const diag = getAdminDiagnostics();
+      return json(res, result.status, {
+        ...result.body,
+        ...diag,
+      });
     }
 
     if (body.code) {

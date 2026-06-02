@@ -102,6 +102,54 @@
     updateAdminHeader();
   }
 
+  function formatAdminGateFailure(data) {
+    var unresolved = (data.unresolvedRoleTokens || []).join(', ');
+    var errLine = data.error ? '<br><strong>Fout:</strong> ' + esc(data.error) : '';
+    var discordLine = data.discordId
+      ? '<br><strong>Jouw Discord user-ID:</strong> <code>' + esc(data.discordId) + '</code>'
+      : '';
+    var roleSourceLine = data.roleSource
+      ? '<br><small>Rollen gelezen via: ' + esc(data.roleSource) + '</small>'
+      : '';
+    var allowlistHint = '';
+    if ((data.misconfiguredAllowlistRoleIds || []).length) {
+      allowlistHint =
+        '<br><strong style="color:#fca5a5">Fout in Vercel STORE_ADMIN_DISCORD_IDS:</strong> je hebt een <em>rol-ID</em> ingevuld (<code>' +
+        esc(data.misconfiguredAllowlistRoleIds.join(', ')) +
+        '</code>). Daar moet je <strong>user-ID</strong> staan — zie hierboven bij Jouw Discord user-ID.';
+    } else if ((data.allowlistCount || 0) > 0 && data.discordId) {
+      allowlistHint =
+        '<br><small>Allowlist actief (' +
+        data.allowlistCount +
+        ' ID(s)) — jouw user-ID moet exact overeenkomen. Na wijziging in Vercel: opnieuw deployen + hier opnieuw inloggen.</small>';
+    }
+    var botHint = '';
+    if (!data.botTokenSet || !data.guildIdSet) {
+      botHint =
+        '<br><strong style="color:#fca5a5">Vercel mist DISCORD_BOT_TOKEN of DISCORD_GUILD_ID</strong> (URP server: <code>1416816652644909109</code>).';
+    }
+    return (
+      'Geen beheer-toegang (Discord server …' +
+      esc(data.guildIdSuffix || '??????') +
+      ').' +
+      errLine +
+      discordLine +
+      roleSourceLine +
+      allowlistHint +
+      botHint +
+      '<br><strong>Vereiste store-rollen (rol-ID):</strong> <code>' +
+      esc((data.requiredRoleIds || []).join(', ') || 'niet geconfigureerd') +
+      '</code><br><strong>Jouw rollen op de server:</strong> ' +
+      esc(formatRoleList(data.memberRoles, data.memberRoleIds)) +
+      (unresolved
+        ? '<br><strong>Let op:</strong> onbekende rolnamen in Vercel: <code>' +
+          esc(unresolved) +
+          '</code>'
+        : '') +
+      '<br><br><strong>Oplossing:</strong> klik opnieuw op <em>Inloggen met Discord</em> (niet alleen e-mail). Zet in Vercel <code>STORE_ADMIN_DISCORD_IDS</code> = jouw user-ID hierboven.'
+    );
+  }
+
   async function refreshAdminAccess() {
     const gateHint = document.getElementById('adminGateHint');
 
@@ -122,10 +170,8 @@
       openAdminApp();
       return true;
     }
-
-    if (isStoreAdmin()) {
-      openAdminApp();
-      return true;
+    if (me && me.isAdmin === false) {
+      sessionStorage.setItem('urpStoreBeheer', 'false');
     }
 
     setGateHint('Beheer-rechten controleren via Discord…');
@@ -170,26 +216,7 @@
       if (!data.isAdmin) {
         if (gateHint) {
           gateHint.classList.remove('hidden');
-          var unresolved = (data.unresolvedRoleTokens || []).join(', ');
-          var errLine = data.error ? '<br><strong>Fout:</strong> ' + esc(data.error) : '';
-          var discordLine = data.discordId
-            ? '<br><strong>Jouw Discord-ID:</strong> <code>' + esc(data.discordId) + '</code>'
-            : '';
-          gateHint.innerHTML =
-            'Geen beheer-toegang (server …' +
-            esc(data.guildIdSuffix || '??????') +
-            ').' +
-            errLine +
-            discordLine +
-            '<br><strong>Vereist (rol-ID):</strong> <code>' +
-            esc((data.requiredRoleIds || []).join(', ') || 'niet geconfigureerd') +
-            '</code><br><strong>Jouw rollen:</strong> ' +
-            esc(formatRoleList(data.memberRoles, data.memberRoleIds)) +
-            (unresolved
-              ? '<br><strong>Let op:</strong> onbekende rolnamen in Vercel: <code>' +
-                esc(unresolved) +
-                '</code>'
-              : '');
+          gateHint.innerHTML = formatAdminGateFailure(data);
         }
         showGate(true);
         showToast('Geen store-beheer rol op Discord.');
@@ -759,6 +786,17 @@
           }
           return;
         }
+        if (oauth && oauth.discordId) {
+          setStoreSession({
+            username: oauth.username,
+            accessToken: oauth.accessToken,
+            isAdmin: false,
+            discordId: oauth.discordId,
+            discordLinked: true,
+            avatarUrl: oauth.avatarUrl,
+            loginMethod: 'discord',
+          });
+        }
       }
     } catch (e) {
       setGateHint('Login mislukt: ' + e.message);
@@ -766,24 +804,6 @@
     }
 
     if (btnLoginGate) btnLoginGate.disabled = false;
-
-    if (isStoreLoggedIn() && isStoreAdmin()) {
-      openAdminApp();
-      try {
-        await loadSnapshot();
-        syncProductTypeFields();
-      } catch (e) {
-        showToast(e.message);
-        if (!(await refreshAdminAccess())) return;
-        try {
-          await loadSnapshot();
-          syncProductTypeFields();
-        } catch (err) {
-          showToast(err.message);
-        }
-      }
-      return;
-    }
 
     if (!params.get('code')) {
       try {
