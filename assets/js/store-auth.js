@@ -121,7 +121,7 @@ async function handleStoreOAuthCallback() {
   let linkUserId = null;
   if (state.startsWith('link:')) {
     linkUserId = state.slice(5);
-  } else if (storeLoginMethod() === 'email' && storeUserId()) {
+  } else if (state !== 'admin' && storeLoginMethod() === 'email' && storeUserId()) {
     linkUserId = storeUserId();
   }
 

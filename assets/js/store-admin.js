@@ -86,10 +86,26 @@
     }
 
     try {
-      const data = await storeApi('/api/store-auth', {
+      const headers = { 'Content-Type': 'application/json' };
+      const token = storeAccessToken();
+      if (token) headers.Authorization = 'Bearer ' + token;
+
+      const res = await fetch(window.STORE_CONFIG.apiBase + '/api/store-auth', {
         method: 'POST',
-        body: { action: 'admin-check' },
+        headers: headers,
+        body: JSON.stringify({ action: 'admin-check' }),
       });
+      const data = await res.json().catch(function () {
+        return {};
+      });
+
+      if (!res.ok && !data.requiredRoleIds && !data.memberRoleIds) {
+        throw new Error(data.error || res.statusText || 'Admin check mislukt');
+      }
+
+      if (!res.ok && data.error && !data.discordId) {
+        throw new Error(data.error);
+      }
 
       setStoreSession({
         username: data.username,
@@ -105,17 +121,24 @@
         if (gateHint) {
           gateHint.classList.remove('hidden');
           var unresolved = (data.unresolvedRoleTokens || []).join(', ');
+          var errLine = data.error ? '<br><strong>Fout:</strong> ' + esc(data.error) : '';
+          var discordLine = data.discordId
+            ? '<br><strong>Jouw Discord-ID:</strong> <code>' + esc(data.discordId) + '</code>'
+            : '';
           gateHint.innerHTML =
-            'Geen beheer-rol gevonden op de URP Discord (server …' +
+            'Geen beheer-toegang (server …' +
             esc(data.guildIdSuffix || '??????') +
-            ').<br><strong>Vereist:</strong> ' +
-            esc(formatRoleList(data.requiredRoles, data.requiredRoleIds)) +
-            '<br><strong>Jouw rollen:</strong> ' +
+            ').' +
+            errLine +
+            discordLine +
+            '<br><strong>Vereist (rol-ID):</strong> <code>' +
+            esc((data.requiredRoleIds || []).join(', ') || 'niet geconfigureerd') +
+            '</code><br><strong>Jouw rollen:</strong> ' +
             esc(formatRoleList(data.memberRoles, data.memberRoleIds)) +
             (unresolved
-              ? '<br><strong>Let op:</strong> in Vercel staan onbekende rolnamen: <code>' +
+              ? '<br><strong>Let op:</strong> onbekende rolnamen in Vercel: <code>' +
                 esc(unresolved) +
-                '</code> — gebruik rol-ID of exacte Discord-rolnaam.'
+                '</code>'
               : '');
         }
         showGate(true);
@@ -630,7 +653,7 @@
   });
 
   function goDiscordLogin() {
-    sessionStorage.setItem('urpStoreRedirect', '/admin.html');
+    clearStoreSession();
     window.location.href = getStoreDiscordAuthUrl(storeOAuthReturnUri(), null, 'admin');
   }
 

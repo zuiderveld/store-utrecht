@@ -16,17 +16,20 @@ function parseRoleList(raw) {
 }
 
 function getAdminRoleTokens() {
+  const defaults = [...(rolesFile.beheerRoleIds || [])];
+  const merged = new Set(defaults);
+
   const fromStore = process.env.DISCORD_STORE_ADMIN_ROLES;
   if (fromStore != null && String(fromStore).trim()) {
-    const parsed = parseRoleList(fromStore);
-    if (parsed.length) return parsed;
+    parseRoleList(fromStore).forEach((t) => merged.add(t));
   }
+
   const fromBeheer = process.env.DISCORD_STAFF_BEHEER_ROLES;
   if (fromBeheer != null && String(fromBeheer).trim()) {
-    const parsed = parseRoleList(fromBeheer);
-    if (parsed.length) return parsed;
+    parseRoleList(fromBeheer).forEach((t) => merged.add(t));
   }
-  return [...(rolesFile.beheerRoleIds || [])];
+
+  return [...merged];
 }
 
 /** Backwards compatible export */
@@ -55,9 +58,27 @@ function getBotHeaders() {
 }
 
 function getGuildId() {
-  const guildId = String(process.env.DISCORD_GUILD_ID || '').trim();
+  let guildId = String(process.env.DISCORD_GUILD_ID || '').trim();
+  if (
+    (guildId.startsWith('"') && guildId.endsWith('"')) ||
+    (guildId.startsWith("'") && guildId.endsWith("'"))
+  ) {
+    guildId = guildId.slice(1, -1).trim();
+  }
   if (!guildId) throw new Error('DISCORD_GUILD_ID ontbreekt in Vercel.');
   return guildId;
+}
+
+function getAdminDiscordIds() {
+  const raw = process.env.STORE_ADMIN_DISCORD_IDS || process.env.DISCORD_STORE_ADMIN_USER_IDS;
+  if (!raw || !String(raw).trim()) return [];
+  return parseRoleList(raw);
+}
+
+function isAdminDiscordUser(discordId) {
+  const ids = getAdminDiscordIds().map(String);
+  if (!ids.length || !discordId) return false;
+  return ids.includes(String(discordId));
 }
 
 async function getGuildRoles(force = false) {
@@ -189,22 +210,64 @@ function avatarUrlFromUser(user) {
 }
 
 async function buildMemberAuthPayload(discordId, profile = {}) {
-  const member = await getGuildMember(discordId);
-  const memberRoles = member.roles || [];
   const guildRoles = await getGuildRoles();
   const { byId } = buildRoleLookup(guildRoles);
   const admin = await resolveAdminRoleIds();
+
+  if (isAdminDiscordUser(discordId)) {
+    return {
+      username: profile.username || profile.discordUsername || 'Beheerder',
+      discordUsername: profile.discordUsername || null,
+      discordId: String(discordId),
+      avatarUrl: profile.avatarUrl || null,
+      isAdmin: true,
+      memberRoleIds: [],
+      memberRoles: [],
+      requiredRoleIds: admin.roleIds,
+      requiredRoles: roleSummaries(admin.roleIds, byId),
+      configuredRoleTokens: admin.tokens,
+      unresolvedRoleTokens: admin.unresolved,
+      guildIdSuffix: getGuildId().slice(-6),
+      adminViaUserAllowlist: true,
+    };
+  }
+
+  let member;
+  try {
+    member = await getGuildMember(discordId);
+  } catch (err) {
+    return {
+      username: profile.username || profile.discordUsername || 'Gebruiker',
+      discordUsername: profile.discordUsername || null,
+      discordId: String(discordId),
+      avatarUrl: profile.avatarUrl || null,
+      isAdmin: false,
+      memberRoleIds: [],
+      memberRoles: [],
+      requiredRoleIds: admin.roleIds,
+      requiredRoles: roleSummaries(admin.roleIds, byId),
+      configuredRoleTokens: admin.tokens,
+      unresolvedRoleTokens: admin.unresolved,
+      guildIdSuffix: getGuildId().slice(-6),
+      error: err.message,
+    };
+  }
+
+  const memberRoles = member.roles || [];
+  const isAdmin = isAdminWithResolvedIds(memberRoles, admin.roleIds);
+  const matchedAdminRoleIds = admin.roleIds.filter((id) => memberRoles.map(String).includes(String(id)));
 
   return {
     username: profile.username || member.nick || profile.discordUsername || 'Gebruiker',
     discordUsername: profile.discordUsername || null,
     discordId: String(discordId),
     avatarUrl: profile.avatarUrl || null,
-    isAdmin: isAdminWithResolvedIds(memberRoles, admin.roleIds),
+    isAdmin,
     memberRoleIds: memberRoles.map(String),
     memberRoles: roleSummaries(memberRoles, byId),
     requiredRoleIds: admin.roleIds,
     requiredRoles: roleSummaries(admin.roleIds, byId),
+    matchedAdminRoleIds,
     configuredRoleTokens: admin.tokens,
     unresolvedRoleTokens: admin.unresolved,
     guildIdSuffix: getGuildId().slice(-6),

@@ -13,6 +13,7 @@ module.exports = {
     { id: 'beheer-team', naam: 'Beheer Team', discordRoleId: '1502448635709751457' },
     { id: 'bestuur-team', naam: 'Bestuur Team', discordRoleId: '1502448643041661088' },
     { id: 'hogerop-team', naam: 'Hogerop Team', discordRoleId: '1502448648930459792' },
+    { id: 'store-beheer', naam: 'Store Beheer', discordRoleId: '1502448726676078704' },
     { id: 'staff', naam: 'Staff', discordRoleId: '1502448659839582230' },
   ],
 };
