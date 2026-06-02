@@ -36,6 +36,12 @@ Zie **`OX-ITEMS-URP.md`** voor URP-voorbeelden (water, bread, burger, phone, …
 Speler moet **online** zijn — item binnen ~3–5 sec via `exports.ox_inventory:AddItem`.  
 Offline → order blijft *pending* tot je inlogt.
 
+## Discord rollen (bijv. 67dance)
+
+Bij product type **`discord_role`** in admin — zie **`DISCORD-ROLES-STORE.md`**.
+
+Speler krijgt de rol **direct op Discord** (geen FiveM actie). Vereist: Discord gekoppeld + lid van URP Discord.
+
 ## Voertuigen (cloud-garage)
 
 Bij product type **vehicle** in admin:

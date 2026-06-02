@@ -41,6 +41,14 @@ function validateProductMeta(product) {
       meta.item = normalized.toLowerCase();
     }
   }
+  if (type === 'discord_role') {
+    const { normalizeRoleId } = require('./discord-role-fulfill');
+    const roleId = normalizeRoleId(meta.discordRoleId || meta.roleId);
+    if (!roleId) {
+      throw new Error(`${label}: mist Discord rol-ID (admin → meta.discordRoleId)`);
+    }
+    meta.discordRoleId = roleId;
+  }
 }
 
 function mergeOrderMeta(state, order) {

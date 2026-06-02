@@ -87,7 +87,7 @@ async function getState() {
 
 async function saveState(mutator) {
   const state = await getState();
-  const next = mutator(state) || state;
+  const next = (await mutator(state)) || state;
   await writeBlob(next);
   return next;
 }

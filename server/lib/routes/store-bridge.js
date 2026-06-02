@@ -1,6 +1,12 @@
 const { cors, json, readBody, checkBridgeKey } = require('../store/http');
 const { saveState, getState } = require('../store/blob-store');
 const { findUserByLicense, findUserInState, purchaseOne, purchaseCart, mergeOrderMeta, normalizeProductIds } = require('../store/purchase-core');
+const { processPendingDiscordRoleOrders, purchaseMessageForOrder, isDiscordRoleOrder } = require('../store/discord-role-fulfill');
+
+async function runDiscordRoleFulfillment(state) {
+  await processPendingDiscordRoleOrders(state);
+  return state;
+}
 
 function mapProduct(p) {
   return {
@@ -105,12 +111,13 @@ module.exports = async function handler(req, res) {
       let order = null;
       let coins = 0;
 
-      await saveState((state) => {
+      await saveState(async (state) => {
         const user = findUserByLicense(state, license);
         if (!user) throw new Error('Account niet gekoppeld — log in op de website en gebruik /koppelstore');
         const result = purchaseOne(state, user, productId);
         order = result.order;
         coins = result.coins;
+        await runDiscordRoleFulfillment(state);
         return state;
       });
 
@@ -118,10 +125,7 @@ module.exports = async function handler(req, res) {
         ok: true,
         orderId: order.id,
         coins,
-        message:
-          order.productType === 'vehicle'
-            ? 'Voertuig komt binnen enkele seconden in je garage.'
-            : 'Aankoop geplaatst.',
+        message: purchaseMessageForOrder(order),
       });
     }
 
@@ -136,13 +140,14 @@ module.exports = async function handler(req, res) {
       let coins = 0;
       let total = 0;
 
-      await saveState((state) => {
+      await saveState(async (state) => {
         const user = findUserByLicense(state, license);
         if (!user) throw new Error('Account niet gekoppeld — log in op de website en gebruik /koppelstore');
         const result = purchaseCart(state, user, productIds);
         orders = result.orders;
         coins = result.coins;
         total = result.total;
+        await runDiscordRoleFulfillment(state);
         return state;
       });
 
@@ -156,9 +161,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'pending' && req.method === 'GET') {
-      const state = await getState();
+      const state = await saveState(async (s) => {
+        await processPendingDiscordRoleOrders(s);
+        return s;
+      });
+
       const pending = state.orders
-        .filter((o) => o.status === 'pending')
+        .filter((o) => o.status === 'pending' && !isDiscordRoleOrder(o))
         .slice(0, 25)
         .map((o) => ({
           id: o.id,

@@ -2,6 +2,7 @@ const { cors, json, readBody } = require('../store/http');
 const { requireDiscordAndFivem } = require('../store/session');
 const { saveState } = require('../store/blob-store');
 const { findUserInState, purchaseOne } = require('../store/purchase-core');
+const { processPendingDiscordRoleOrders, purchaseMessageForOrder } = require('../store/discord-role-fulfill');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -17,12 +18,13 @@ module.exports = async function handler(req, res) {
     let order = null;
     let newBalance = 0;
 
-    await saveState((state) => {
+    await saveState(async (state) => {
       const user = findUserInState(state, ctx.user);
       if (!user) throw new Error('Gebruiker niet gevonden');
       const result = purchaseOne(state, user, productId);
       order = result.order;
       newBalance = result.coins;
+      await processPendingDiscordRoleOrders(state);
       return state;
     });
 
@@ -30,10 +32,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       orderId: order.id,
       coins: newBalance,
-      message:
-        order.productType === 'vehicle'
-          ? 'Aankoop gelukt — voertuig staat binnen enkele seconden in je garage (open je garage in-game).'
-          : 'Aankoop gelukt — item komt binnen enkele seconden in je ox_inventory (je moet online zijn).',
+      message: purchaseMessageForOrder(order),
     });
   } catch (err) {
     console.error('store-purchase:', err);

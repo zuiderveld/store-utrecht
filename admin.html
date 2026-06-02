@@ -124,7 +124,8 @@
                     <label>Type
                         <select name="type" id="prodType">
                             <option value="vehicle">Voertuig (garage)</option>
-                            <option value="item">Item</option>
+                            <option value="item">Item (ox_inventory)</option>
+                            <option value="discord_role">Discord rol</option>
                             <option value="other">Overig</option>
                         </select>
                     </label>
@@ -151,6 +152,18 @@
                         <span class="admin-field-hint">Exacte key uit ox_inventory — bijv. <code>water</code>, <code>bread</code>, <code>burger</code>, <code>phone</code> (kleine letters)</span>
                     </label>
                     <label>Aantal <input name="itemCount" id="prodItemCount" type="number" min="1" placeholder="1" value="1"></label>
+                    </div>
+                    <div class="admin-form-section span-2" id="prodSectionDiscordRole">
+                        <span>Discord rol (type discord_role)</span>
+                    </div>
+                    <div class="admin-form-grid-prod discord-role-fields span-2" id="prodDiscordRoleFields">
+                    <label class="span-2">Discord rol-ID <strong class="req">*</strong>
+                        <input name="discordRoleId" id="prodDiscordRoleId" placeholder="1234567890123456789" autocomplete="off">
+                        <span class="admin-field-hint">Rechtsklik rol in Discord (Dev mode) → ID kopiëren. Bijv. rol <code>67dance</code>.</span>
+                    </label>
+                    <label class="span-2">Rol naam (optioneel, alleen label)
+                        <input name="discordRoleName" id="prodDiscordRoleName" placeholder="67dance">
+                    </label>
                     </div>
                     <label class="admin-check span-2"><input type="checkbox" id="prodActive" checked> Product actief in store</label>
                     <button type="submit" class="btn-main span-2">Product opslaan</button>

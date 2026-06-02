@@ -104,6 +104,8 @@
     document.getElementById('prodModel').value = '';
     document.getElementById('prodOxItem').value = '';
     document.getElementById('prodItemCount').value = '';
+    document.getElementById('prodDiscordRoleId').value = '';
+    document.getElementById('prodDiscordRoleName').value = '';
     document.getElementById('prodGarage').value = '';
     document.getElementById('prodTopspeed').value = '';
     document.getElementById('prodTrunk').value = '';
@@ -189,17 +191,23 @@
     const type = document.getElementById('prodType').value;
     const vehicleFields = document.getElementById('prodVehicleFields');
     const itemFields = document.getElementById('prodItemFields');
+    const discordRoleFields = document.getElementById('prodDiscordRoleFields');
     const sectionVehicle = document.getElementById('prodSectionVehicle');
     const sectionItem = document.getElementById('prodSectionItem');
+    const sectionDiscordRole = document.getElementById('prodSectionDiscordRole');
     const showVehicle = type === 'vehicle';
     const showItem = type === 'item';
+    const showDiscordRole = type === 'discord_role';
 
     vehicleFields.classList.toggle('hidden', !showVehicle);
     sectionVehicle.classList.toggle('hidden', !showVehicle);
     itemFields.classList.toggle('hidden', !showItem);
     sectionItem.classList.toggle('hidden', !showItem);
+    discordRoleFields.classList.toggle('hidden', !showDiscordRole);
+    sectionDiscordRole.classList.toggle('hidden', !showDiscordRole);
     document.getElementById('prodOxItem').required = showItem;
     document.getElementById('prodModel').required = showVehicle;
+    document.getElementById('prodDiscordRoleId').required = showDiscordRole;
   }
 
   document.getElementById('prodType').addEventListener('change', syncProductTypeFields);
@@ -270,6 +278,9 @@
                 : '') +
               (p.type === 'vehicle' && !(p.meta && p.meta.model)
                 ? ' <span class="admin-status failed">geen model</span>'
+                : '') +
+              (p.type === 'discord_role' && !(p.meta && p.meta.discordRoleId)
+                ? ' <span class="admin-status failed">geen rol-ID</span>'
                 : '') +
               '</td><td>' +
               p.price +
@@ -413,6 +424,8 @@
           location: document.getElementById('prodLocation').value.trim(),
           item: normalizeOxItemName(document.getElementById('prodOxItem').value),
           count: document.getElementById('prodItemCount').value.trim() || '1',
+          discordRoleId: document.getElementById('prodDiscordRoleId').value.trim(),
+          roleName: document.getElementById('prodDiscordRoleName').value.trim(),
         },
       });
       showToast('Product opgeslagen');
@@ -560,6 +573,8 @@
       document.getElementById('prodModel').value = p.meta?.model || '';
       document.getElementById('prodOxItem').value = p.meta?.item || '';
       document.getElementById('prodItemCount').value = p.meta?.count || '';
+      document.getElementById('prodDiscordRoleId').value = p.meta?.discordRoleId || p.meta?.roleId || '';
+      document.getElementById('prodDiscordRoleName').value = p.meta?.roleName || '';
       document.getElementById('prodGarage').value = p.meta?.garage || '';
       document.getElementById('prodTopspeed').value = p.meta?.topspeed || '';
       document.getElementById('prodTrunk').value = p.meta?.trunk || '';

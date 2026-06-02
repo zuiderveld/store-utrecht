@@ -138,6 +138,14 @@ module.exports = async function handler(req, res) {
           if (row.type === 'item' && !row.meta?.item) {
             throw new Error('Item vereist ox item naam (meta.item, bijv. bread)');
           }
+          if (row.type === 'discord_role') {
+            const { normalizeRoleId } = require('../store/discord-role-fulfill');
+            const roleId = normalizeRoleId(row.meta?.discordRoleId || row.meta?.roleId);
+            if (!roleId) {
+              throw new Error('Discord rol vereist rol-ID (meta.discordRoleId)');
+            }
+            row.meta = { ...(row.meta || {}), discordRoleId: roleId };
+          }
           result.product = row;
           break;
         }
