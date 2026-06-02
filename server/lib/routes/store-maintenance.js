@@ -3,6 +3,8 @@ const path = require('path');
 const { cors, json } = require('../store/http');
 const { readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
+const { blobAccess } = require('../store/blob-store');
+const { get, put } = require('@vercel/blob');
 
 const DEFAULT_STATE = {
   global: false,
@@ -22,15 +24,16 @@ function readDefaultFile() {
 }
 
 async function loadFromBlob() {
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!blobToken) return null;
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
-    const { head } = require('@vercel/blob');
-    const meta = await head(BLOB_PATHNAME, { token: blobToken });
-    if (meta?.url) {
-      const res = await fetch(meta.url, { cache: 'no-store' });
-      if (res.ok) return await res.json();
-    }
+    const result = await get(BLOB_PATHNAME, {
+      access: blobAccess(),
+      useCache: false,
+    });
+    if (!result?.stream) return null;
+    const text = await new Response(result.stream).text();
+    if (!text) return null;
+    return JSON.parse(text);
   } catch {
     /* geen blob */
   }
@@ -42,9 +45,8 @@ async function saveToBlob(state) {
   if (!blobToken) {
     throw new Error('Vercel Blob vereist (BLOB_READ_WRITE_TOKEN) om onderhoud op te slaan.');
   }
-  const { put } = require('@vercel/blob');
   await put(BLOB_PATHNAME, JSON.stringify(state), {
-    access: 'public',
+    access: blobAccess(),
     token: blobToken,
     addRandomSuffix: false,
     allowOverwrite: true,

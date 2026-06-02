@@ -92,4 +92,4 @@ async function saveState(mutator) {
   return next;
 }
 
-module.exports = { getState, saveState, DEFAULT_STATE, BLOB_PATH };
+module.exports = { getState, saveState, DEFAULT_STATE, BLOB_PATH, blobAccess };
