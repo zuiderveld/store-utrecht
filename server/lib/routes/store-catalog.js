@@ -1,6 +1,6 @@
 const { cors, json } = require('../store/http');
 const { getState } = require('../store/blob-store');
-const { resolveDiscord } = require('../store/session');
+const { resolveAuth, buildMe } = require('../store/session');
 
 function maskUsername(name) {
   if (!name || name === 'Onbekend') return 'Anoniem';
@@ -75,18 +75,9 @@ module.exports = async function handler(req, res) {
     const { topBuyer, recentPurchases } = buildStats(state);
 
     let me = null;
-    const ctx = await resolveDiscord(req.headers.authorization);
+    const ctx = await resolveAuth(req.headers.authorization);
     if (ctx) {
-      me = {
-        discordId: ctx.user.discordId,
-        username: ctx.user.globalName || ctx.user.username,
-        coins: ctx.user.coins || 0,
-        license: ctx.user.license || null,
-        linked: Boolean(ctx.user.license),
-        discordLoggedIn: true,
-        fivemLinked: Boolean(ctx.user.license),
-        isAdmin: Boolean(ctx.isAdmin),
-      };
+      me = { ...buildMe(ctx), accessToken: ctx.accessToken };
     }
 
     return json(res, 200, { categories, products, me, topBuyer, recentPurchases });

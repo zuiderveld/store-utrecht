@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Utrecht Roleplay | Store</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="URP Store — koop voertuigen en items met coins. Coins kopen via Tebex.">
+    <meta name="description" content="URP Store — koop voertuigen en items met coins. Log in met Discord + FiveM.">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/store.css">
@@ -23,12 +23,19 @@
         <a href="https://www.utrechtroleplay.eu/status.html" target="_blank" rel="noopener">Status</a>
         <a href="https://www.utrechtroleplay.eu/apv.html" target="_blank" rel="noopener">APV</a>
         <a href="index.html" class="active">Store</a>
-        <a href="https://www.utrechtroleplay.eu/#donate" target="_blank" rel="noopener">Doneren</a>
         <a href="admin.html" id="navAdmin" style="display:none">Beheer</a>
     </nav>
     <div class="nav-buttons">
         <a href="https://discord.gg/rputrecht" class="btn-outline" target="_blank" rel="noopener">Discord</a>
-        <button type="button" class="btn-main" id="btnLogin">Login</button>
+        <div class="store-session-chip hidden" id="sessionChip">
+            <img id="chipAvatar" class="store-avatar" alt="">
+            <div class="store-session-text">
+                <strong id="chipName">Speler</strong>
+                <span id="chipStatus"></span>
+            </div>
+            <span class="store-session-coins" id="chipCoins">0 🪙</span>
+        </div>
+        <button type="button" class="btn-main" id="btnLogin">Inloggen</button>
         <button type="button" class="btn-outline" id="btnLogout" style="display:none">Uitloggen</button>
     </div>
 </header>
@@ -37,20 +44,25 @@
     <div class="store-hero-inner">
         <h1>Store</h1>
         <p class="store-hero-lead">
-            Gebruik in het spel het commando <strong>/store</strong> of koop hier met je <strong>coins</strong>.
-            Na aankoop worden items <strong>binnen enkele seconden automatisch</strong> aan je account toegevoegd.
+            Gebruik in het spel <strong>/store</strong> of koop hier met <strong>coins</strong>.
+            Om te kopen heb je <strong>Discord + FiveM</strong> gekoppeld nodig.
+            E-mail login is optioneel — Discord blijft verplicht voor aankopen.
         </p>
 
         <div class="store-perks">
             <div class="store-perk"><span class="store-perk-icon">⚡</span> Direct ontvangen</div>
-            <div class="store-perk"><span class="store-perk-icon">🪙</span> Coins via Tebex</div>
-            <div class="store-perk"><span class="store-perk-icon">🎮</span> Discord + FiveM</div>
+            <div class="store-perk"><span class="store-perk-icon">🎮</span> Discord + FiveM vereist</div>
+            <div class="store-perk"><span class="store-perk-icon">📧</span> Optioneel e-mail account</div>
             <div class="store-perk"><span class="store-perk-icon">💬</span> Support via Discord</div>
         </div>
 
+        <div class="store-logged-banner hidden" id="loggedBanner">
+            <span class="store-logged-dot"></span>
+            <span id="loggedBannerText">Je bent ingelogd</span>
+        </div>
+
         <div class="store-hero-actions" id="heroActions">
-            <button type="button" class="btn-main" id="btnLoginHero">Login met Discord</button>
-            <a href="#" class="btn-outline" id="heroTebex" target="_blank" rel="noopener">Coins kopen via Tebex</a>
+            <button type="button" class="btn-main" id="btnLoginHero">Inloggen</button>
         </div>
 
         <div class="store-userbar" id="userBar" style="display:none">
@@ -60,10 +72,13 @@
             </div>
             <div class="store-user-info">
                 <img id="userAvatar" class="store-avatar" alt="" style="display:none">
-                <span id="userName"></span>
+                <div>
+                    <div id="userName" class="store-user-name"></div>
+                    <div class="store-status-badges" id="statusBadges"></div>
+                </div>
             </div>
-            <button type="button" class="btn-outline" id="btnLinkFivem">Koppel FiveM</button>
-            <a href="#" class="btn-main" id="btnBuyCoins" target="_blank" rel="noopener">Coins kopen</a>
+            <button type="button" class="btn-outline hidden" id="btnLinkDiscord">Koppel Discord</button>
+            <button type="button" class="btn-outline hidden" id="btnLinkFivem">Koppel FiveM</button>
         </div>
     </div>
 </section>
@@ -107,12 +122,45 @@
                 </ul>
             </div>
 
-            <div class="store-widget store-widget-tebex">
-                <h3>Coins nodig?</h3>
-                <p>Koop coins via onze Tebex-winkel. Ze worden automatisch aan je account toegevoegd.</p>
-                <a href="#" class="btn-main store-tebex-btn" id="sidebarTebex" target="_blank" rel="noopener">Naar Tebex</a>
+            <div class="store-widget">
+                <h3>Hoe werkt het?</h3>
+                <p class="store-widget-sub">1. Log in (Discord of e-mail)<br>2. Koppel Discord + FiveM<br>3. Koop met coins via website of /store in-game</p>
             </div>
         </aside>
+    </div>
+</div>
+
+<div class="store-modal-backdrop" id="loginModal" hidden>
+    <div class="store-modal store-auth-modal" role="dialog" aria-modal="true">
+        <button type="button" class="store-modal-close" id="loginModalClose" aria-label="Sluiten">&times;</button>
+        <h2>Inloggen</h2>
+        <p class="store-auth-hint">Voor aankopen: koppel altijd <strong>Discord</strong> en <strong>FiveM</strong>.</p>
+
+        <div class="store-auth-tabs">
+            <button type="button" class="store-auth-tab active" data-auth-tab="discord">Discord</button>
+            <button type="button" class="store-auth-tab" data-auth-tab="email">E-mail</button>
+        </div>
+
+        <div id="authPanelDiscord" class="store-auth-panel">
+            <p>Log in met je Discord-account op de URP-server.</p>
+            <button type="button" class="btn-main store-auth-full" id="btnDiscordLogin">Doorgaan met Discord</button>
+        </div>
+
+        <div id="authPanelEmail" class="store-auth-panel hidden">
+            <form id="emailLoginForm" class="store-auth-form">
+                <label>E-mail<input type="email" name="email" required autocomplete="email"></label>
+                <label>Wachtwoord<input type="password" name="password" required minlength="8" autocomplete="current-password"></label>
+                <button type="submit" class="btn-main store-auth-full">Inloggen</button>
+            </form>
+            <hr class="store-auth-divider">
+            <form id="emailRegisterForm" class="store-auth-form">
+                <p class="store-auth-sub">Nog geen account? Maak er een aan (optioneel):</p>
+                <label>Weergavenaam<input type="text" name="displayName" required maxlength="40"></label>
+                <label>E-mail<input type="email" name="email" required autocomplete="email"></label>
+                <label>Wachtwoord (min. 8)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
+                <button type="submit" class="btn-outline store-auth-full">Account aanmaken</button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -141,7 +189,6 @@
         <div class="store-footer-links">
             <a href="https://www.utrechtroleplay.eu/apv.html" target="_blank" rel="noopener">APV</a>
             <a href="https://discord.gg/rputrecht" target="_blank" rel="noopener">Discord</a>
-            <a href="#" id="footerTebex" target="_blank" rel="noopener">Doneren</a>
         </div>
     </div>
     <p class="store-footer-copy">© 2026 Utrecht Roleplay — Alle rechten voorbehouden</p>

@@ -10,6 +10,8 @@
 
 **Belangrijk:** upload/deploy altijd met **`package.json`** + **`package-lock.json`** in de root (niet alleen HTML). Anders mist `@vercel/blob` en krijg je `Cannot find module '@vercel/blob'`.
 
+**Blob private store:** als je store op *Private* staat (aanbevolen), gebruik `@vercel/blob` ≥ 2.3 en laat `BLOB_ACCESS` leeg of `private`. Fout *"Cannot use public access on a private store"* betekent dat je oude code deployde — redeploy na `npm install`.
+
 ---
 
 ## Handmatige upload (max 100 bestanden)

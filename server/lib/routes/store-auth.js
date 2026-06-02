@@ -1,7 +1,8 @@
 const { cors, json, readBody } = require('../store/http');
 const { exchangeCode, verifyStoreMember } = require('../store/discord-store');
-const { upsertUserFromDiscord } = require('../store/session');
+const { upsertDiscordUser, linkDiscordToEmailUser, buildMe } = require('../store/session');
 const { getState } = require('../store/blob-store');
+const { findUser, findUserByDiscordId } = require('../store/auth-sessions');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -19,21 +20,24 @@ module.exports = async function handler(req, res) {
     if (!accessToken) return json(res, 400, { error: 'Geen Discord code of token' });
 
     const discord = await verifyStoreMember(accessToken);
-    await upsertUserFromDiscord(discord);
+
+    if (body.linkUserId && String(body.linkUserId).startsWith('em_')) {
+      await linkDiscordToEmailUser(body.linkUserId, discord);
+    } else {
+      await upsertDiscordUser(discord);
+    }
 
     const state = await getState();
-    const user = state.users[discord.discordId] || {};
+    const user = body.linkUserId
+      ? findUser(state, body.linkUserId)
+      : findUserByDiscordId(state, discord.discordId) || state.users[discord.discordId] || {};
+
+    const me = buildMe({ user, isAdmin: discord.isAdmin });
 
     return json(res, 200, {
-      username: discord.username,
-      discordUsername: discord.discordUsername,
-      discordId: discord.discordId,
-      avatarUrl: discord.avatarUrl,
+      ...me,
       accessToken: discord.accessToken,
-      isAdmin: discord.isAdmin,
-      coins: user.coins || 0,
-      license: user.license || null,
-      linked: Boolean(user.license),
+      message: body.linkUserId ? 'Discord gekoppeld aan je account!' : undefined,
     });
   } catch (err) {
     console.error('store-auth:', err);

@@ -1,6 +1,12 @@
-const { head, put } = require('@vercel/blob');
+const { get, put } = require('@vercel/blob');
 
 const BLOB_PATH = 'store/state.json';
+
+/** 'private' voor Vercel Blob private store (standaard). Zet 'public' alleen bij een public store. */
+function blobAccess() {
+  const mode = (process.env.BLOB_ACCESS || 'private').toLowerCase();
+  return mode === 'public' ? 'public' : 'private';
+}
 
 const DEFAULT_STATE = {
   version: 1,
@@ -25,16 +31,26 @@ const DEFAULT_STATE = {
   users: {},
   sessions: {},
   linkCodes: {},
+  authSessions: {},
+  emailIndex: {},
   orders: [],
 };
 
+async function streamToText(stream) {
+  if (!stream) return '';
+  return new Response(stream).text();
+}
+
 async function readBlob() {
   try {
-    const meta = await head(BLOB_PATH);
-    if (!meta?.url) return null;
-    const res = await fetch(meta.url);
-    if (!res.ok) return null;
-    return res.json();
+    const result = await get(BLOB_PATH, {
+      access: blobAccess(),
+      useCache: false,
+    });
+    if (!result?.stream) return null;
+    const text = await streamToText(result.stream);
+    if (!text) return null;
+    return JSON.parse(text);
   } catch {
     return null;
   }
@@ -42,7 +58,7 @@ async function readBlob() {
 
 async function writeBlob(state) {
   await put(BLOB_PATH, JSON.stringify(state), {
-    access: 'public',
+    access: blobAccess(),
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: 'application/json',
@@ -63,6 +79,8 @@ async function getState() {
     users: raw.users || {},
     sessions: raw.sessions || {},
     linkCodes: raw.linkCodes || {},
+    authSessions: raw.authSessions || {},
+    emailIndex: raw.emailIndex || {},
     orders: raw.orders || [],
   };
 }

@@ -1,4 +1,4 @@
-/** Zelfde sessie-patroon als staff-portaal (urpStaff* → urpStore*) */
+/** Store sessie — Discord of e-mail */
 
 function isStoreLoggedIn() {
   return !!sessionStorage.getItem('urpStoreUser') && !!sessionStorage.getItem('urpStoreAccessToken');
@@ -16,25 +16,37 @@ function isStoreFivemLinked() {
   return sessionStorage.getItem('urpStoreFivemLinked') === 'true';
 }
 
+function isStoreDiscordLinked() {
+  return sessionStorage.getItem('urpStoreDiscordLinked') === 'true';
+}
+
 function storeUserName() {
   return sessionStorage.getItem('urpStoreUser') || 'Speler';
 }
 
-function storeDiscordId() {
-  return sessionStorage.getItem('urpStoreDiscordId') || '';
+function storeUserId() {
+  return sessionStorage.getItem('urpStoreUserId') || '';
+}
+
+function storeLoginMethod() {
+  return sessionStorage.getItem('urpStoreLoginMethod') || '';
 }
 
 function setStoreSession(data) {
   sessionStorage.setItem('urpStoreUser', data.username || 'Speler');
   sessionStorage.setItem('urpStoreAccessToken', data.accessToken || '');
   sessionStorage.setItem('urpStoreBeheer', data.isAdmin ? 'true' : 'false');
-  sessionStorage.setItem('urpStoreFivemLinked', data.linked ? 'true' : 'false');
+  sessionStorage.setItem('urpStoreFivemLinked', data.fivemLinked || data.linked ? 'true' : 'false');
+  sessionStorage.setItem('urpStoreDiscordLinked', data.discordLinked ? 'true' : 'false');
+  if (data.userId) sessionStorage.setItem('urpStoreUserId', data.userId);
+  else if (data.discordId) sessionStorage.setItem('urpStoreUserId', data.discordId);
   if (data.discordId) sessionStorage.setItem('urpStoreDiscordId', data.discordId);
   else sessionStorage.removeItem('urpStoreDiscordId');
   if (data.avatarUrl) sessionStorage.setItem('urpStoreAvatarUrl', data.avatarUrl);
-  else sessionStorage.removeItem('urpStoreAvatarUrl');
-  if (data.discordUsername) sessionStorage.setItem('urpStoreDiscordTag', data.discordUsername);
-  else sessionStorage.removeItem('urpStoreDiscordTag');
+  else if (!data.discordLinked && data.loginMethod === 'email') sessionStorage.removeItem('urpStoreAvatarUrl');
+  if (data.email) sessionStorage.setItem('urpStoreEmail', data.email);
+  else sessionStorage.removeItem('urpStoreEmail');
+  if (data.loginMethod) sessionStorage.setItem('urpStoreLoginMethod', data.loginMethod);
   if (data.coins != null) sessionStorage.setItem('urpStoreCoins', String(data.coins));
 }
 
@@ -44,8 +56,12 @@ function clearStoreSession() {
     'urpStoreAccessToken',
     'urpStoreBeheer',
     'urpStoreFivemLinked',
+    'urpStoreDiscordLinked',
     'urpStoreDiscordId',
+    'urpStoreUserId',
     'urpStoreAvatarUrl',
+    'urpStoreEmail',
+    'urpStoreLoginMethod',
     'urpStoreDiscordTag',
     'urpStoreCoins',
     'urpStoreRedirect',
@@ -53,7 +69,7 @@ function clearStoreSession() {
 }
 
 function canUseCoins() {
-  return isStoreLoggedIn() && isStoreFivemLinked();
+  return isStoreLoggedIn() && isStoreDiscordLinked() && isStoreFivemLinked();
 }
 
 async function storeApi(path, options = {}) {
@@ -71,14 +87,27 @@ async function storeApi(path, options = {}) {
   return data;
 }
 
-async function discordStoreAuthWithCode(code) {
+async function discordStoreAuthWithCode(code, linkUserId) {
   const res = await fetch(window.STORE_CONFIG.apiBase + '/api/store-auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code: code, redirectUri: discordRedirectUri() }),
+    body: JSON.stringify({
+      code: code,
+      redirectUri: discordRedirectUri(),
+      linkUserId: linkUserId || undefined,
+    }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Discord inloggen mislukt');
+  setStoreSession(data);
+  return data;
+}
+
+async function emailStoreAuth(action, payload) {
+  const data = await storeApi('/api/store-email-auth', {
+    method: 'POST',
+    body: { action, ...payload },
+  });
   setStoreSession(data);
   return data;
 }
@@ -87,12 +116,33 @@ async function handleStoreOAuthCallback() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
   if (!code) return null;
-  const data = await discordStoreAuthWithCode(code);
+
+  const state = params.get('state') || '';
+  let linkUserId = null;
+  if (state.startsWith('link:')) {
+    linkUserId = state.slice(5);
+  } else if (storeLoginMethod() === 'email' && storeUserId()) {
+    linkUserId = storeUserId();
+  }
+
+  const data = await discordStoreAuthWithCode(code, linkUserId);
   window.history.replaceState({}, '', window.location.pathname);
   return data;
 }
 
 function storeLogout() {
+  const token = storeAccessToken();
+  if (token.startsWith('urp_')) {
+    fetch(window.STORE_CONFIG.apiBase + '/api/store-email-auth', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'logout' }),
+    }).catch(function () {});
+  }
   clearStoreSession();
   window.location.replace('/');
+}
+
+function openDiscordLogin(linkUserId) {
+  window.location.href = getStoreDiscordAuthUrl(discordRedirectUri(), linkUserId || null);
 }

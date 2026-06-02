@@ -1,5 +1,7 @@
 /* Store — extends style.css (Vertex-inspired layout, Utrecht styling) */
 
+.hidden { display: none !important; }
+
 /* =============================
    HERO
 ============================= */
@@ -733,6 +735,190 @@
 .store-footer-copy {
     text-align: center;
     font-size: 0.85rem;
+}
+
+/* =============================
+   AUTH & SESSION
+============================= */
+.store-session-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px 6px 6px;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    max-width: 320px;
+}
+
+.store-session-chip .store-avatar {
+    width: 34px;
+    height: 34px;
+}
+
+.store-session-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    min-width: 0;
+}
+
+.store-session-text strong {
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.store-session-text span {
+    font-size: 0.72rem;
+    color: rgba(234, 240, 255, 0.55);
+}
+
+.store-session-coins {
+    font-weight: 900;
+    color: #fde047;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.store-logged-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+.store-logged-banner.ready {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #86efac;
+}
+
+.store-logged-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+}
+
+.store-logged-banner.ready .store-logged-dot {
+    background: #22c55e;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+}
+
+.store-user-name {
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.store-status-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.store-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.store-badge.ok {
+    background: rgba(34, 197, 94, 0.15);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.store-badge.missing {
+    background: rgba(239, 68, 68, 0.12);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.store-auth-modal h2 {
+    margin-bottom: 8px;
+}
+
+.store-auth-hint {
+    color: rgba(234, 240, 255, 0.65);
+    margin-bottom: 18px;
+    font-size: 0.9rem;
+}
+
+.store-auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.store-auth-tab {
+    flex: 1;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(234, 240, 255, 0.8);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.store-auth-tab.active {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+
+.store-auth-panel p {
+    color: rgba(234, 240, 255, 0.7);
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+}
+
+.store-auth-form {
+    display: grid;
+    gap: 12px;
+}
+
+.store-auth-form label {
+    display: grid;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: rgba(234, 240, 255, 0.6);
+}
+
+.store-auth-form input {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.25);
+    color: #eaf0ff;
+}
+
+.store-auth-full {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.store-auth-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 20px 0;
+}
+
+.store-auth-sub {
+    font-size: 0.85rem !important;
+    margin-bottom: 8px !important;
 }
 
 /* =============================

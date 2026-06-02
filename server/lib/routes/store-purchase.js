@@ -1,7 +1,7 @@
 const { cors, json, readBody } = require('../store/http');
 const { requireDiscordAndFivem } = require('../store/session');
 const { saveState } = require('../store/blob-store');
-const { findUserByDiscordId, purchaseOne } = require('../store/purchase-core');
+const { findUserInState, purchaseOne } = require('../store/purchase-core');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
     let newBalance = 0;
 
     await saveState((state) => {
-      const user = findUserByDiscordId(state, ctx.user.discordId);
+      const user = findUserInState(state, ctx.user);
       if (!user) throw new Error('Gebruiker niet gevonden');
       const result = purchaseOne(state, user, productId);
       order = result.order;

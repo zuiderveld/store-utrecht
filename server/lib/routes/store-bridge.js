@@ -1,6 +1,6 @@
 const { cors, json, readBody, checkBridgeKey } = require('../store/http');
 const { saveState, getState } = require('../store/blob-store');
-const { findUserByLicense, purchaseOne, purchaseCart } = require('../store/purchase-core');
+const { findUserByLicense, findUserInState, purchaseOne, purchaseCart } = require('../store/purchase-core');
 
 function mapProduct(p) {
   return {
@@ -79,8 +79,13 @@ module.exports = async function handler(req, res) {
         if (!entry || entry.expiresAt < Date.now()) {
           throw new Error('Koppelcode ongeldig of verlopen');
         }
-        const user = state.users[entry.discordId];
-        if (!user) throw new Error('Discord gebruiker niet gevonden');
+        const user =
+          (entry.userId && state.users[entry.userId]) ||
+          state.users[entry.discordId] ||
+          Object.values(state.users).find(
+            (u) => u.discordId === entry.discordId || u.userId === entry.userId
+          );
+        if (!user) throw new Error('Gebruiker niet gevonden');
 
         user.license = license;
         user.identifiers = identifiers;

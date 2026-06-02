@@ -5,8 +5,10 @@
   const coinEl = document.getElementById('coinBalance');
   const userName = document.getElementById('userName');
   const userAvatar = document.getElementById('userAvatar');
+  const statusBadges = document.getElementById('statusBadges');
   const btnLogin = document.getElementById('btnLogin');
   const btnLogout = document.getElementById('btnLogout');
+  const btnLinkDiscord = document.getElementById('btnLinkDiscord');
   const btnLink = document.getElementById('btnLinkFivem');
   const linkBox = document.getElementById('linkBox');
   const linkCode = document.getElementById('linkCode');
@@ -17,23 +19,29 @@
   const topBuyerEl = document.getElementById('topBuyer');
   const recentList = document.getElementById('recentList');
   const productModal = document.getElementById('productModal');
+  const loginModal = document.getElementById('loginModal');
   const modalClose = document.getElementById('modalClose');
+  const loginModalClose = document.getElementById('loginModalClose');
   const heroActions = document.getElementById('heroActions');
   const btnLoginHero = document.getElementById('btnLoginHero');
+  const sessionChip = document.getElementById('sessionChip');
+  const chipName = document.getElementById('chipName');
+  const chipStatus = document.getElementById('chipStatus');
+  const chipCoins = document.getElementById('chipCoins');
+  const chipAvatar = document.getElementById('chipAvatar');
+  const loggedBanner = document.getElementById('loggedBanner');
+  const loggedBannerText = document.getElementById('loggedBannerText');
 
   let catalog = { categories: [], products: [], me: null, recentPurchases: [], topBuyer: null };
-  let activeCat = 'coins';
+  let activeCat = 'all';
   let searchQuery = '';
-  let modalProduct = null;
-
-  const COINS_TAB = 'coins';
-  const coinPackages = window.STORE_CONFIG?.coinPackages || [];
-  const tebexUrl = window.STORE_CONFIG?.tebexUrl || '#';
 
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 4500);
+    setTimeout(function () {
+      toast.classList.remove('show');
+    }, 4500);
   }
 
   function esc(s) {
@@ -44,8 +52,7 @@
 
   function formatTime(ts) {
     if (!ts) return '';
-    const d = new Date(ts);
-    return d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    return new Date(ts).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
   }
 
   function discountPercent(price, original) {
@@ -58,38 +65,87 @@
   }
 
   function imageBlock(image, name) {
-    if (image) {
-      return '<img src="' + esc(image) + '" alt="' + esc(name) + '" loading="lazy">';
-    }
+    if (image) return '<img src="' + esc(image) + '" alt="' + esc(name) + '" loading="lazy">';
     return '<span class="store-placeholder">' + esc(placeholderLetter(name)) + '</span>';
+  }
+
+  function badge(ok, label) {
+    return (
+      '<span class="store-badge ' +
+      (ok ? 'ok' : 'missing') +
+      '">' +
+      (ok ? '✓' : '✗') +
+      ' ' +
+      label +
+      '</span>'
+    );
+  }
+
+  function openLoginModal() {
+    loginModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLoginModal() {
+    loginModal.hidden = true;
+    document.body.style.overflow = '';
   }
 
   function updateAuthUI() {
     const me = catalog.me;
-    const discordIn = isStoreLoggedIn();
-    const fivemIn = me?.linked || isStoreFivemLinked();
+    const loggedIn = isStoreLoggedIn();
+    const discordOk = me?.discordLinked || isStoreDiscordLinked();
+    const fivemOk = me?.fivemLinked || me?.linked || isStoreFivemLinked();
 
-    btnLogin.style.display = discordIn ? 'none' : 'inline-flex';
-    btnLogout.style.display = discordIn ? 'inline-flex' : 'none';
-    userBar.style.display = discordIn ? 'flex' : 'none';
-    if (heroActions) heroActions.style.display = discordIn ? 'none' : 'flex';
+    btnLogin.style.display = loggedIn ? 'none' : 'inline-flex';
+    btnLogout.style.display = loggedIn ? 'inline-flex' : 'none';
+    userBar.style.display = loggedIn ? 'flex' : 'none';
+    if (heroActions) heroActions.style.display = loggedIn ? 'none' : 'flex';
 
-    if (discordIn && me) {
-      coinEl.textContent = me.coins ?? 0;
-      sessionStorage.setItem('urpStoreCoins', String(me.coins ?? 0));
-      sessionStorage.setItem('urpStoreFivemLinked', fivemIn ? 'true' : 'false');
+    if (loggedIn) {
+      loggedBanner.classList.remove('hidden');
+      sessionChip.classList.remove('hidden');
 
-      let status = 'Discord ✓';
-      status += fivemIn ? ' · FiveM ✓' : ' · FiveM ✗';
-      userName.textContent = (me.username || storeUserName()) + ' — ' + status;
-      btnLink.style.display = fivemIn ? 'none' : 'inline-flex';
-      navAdmin.style.display = me.isAdmin ? 'inline' : 'none';
+      const name = me?.username || storeUserName();
+      const coins = me?.coins ?? sessionStorage.getItem('urpStoreCoins') ?? 0;
 
-      const avatar = sessionStorage.getItem('urpStoreAvatarUrl');
+      coinEl.textContent = coins;
+      chipCoins.textContent = coins + ' 🪙';
+      chipName.textContent = name;
+      userName.textContent = name;
+
+      sessionStorage.setItem('urpStoreCoins', String(coins));
+      sessionStorage.setItem('urpStoreFivemLinked', fivemOk ? 'true' : 'false');
+      sessionStorage.setItem('urpStoreDiscordLinked', discordOk ? 'true' : 'false');
+
+      statusBadges.innerHTML = badge(discordOk, 'Discord') + badge(fivemOk, 'FiveM');
+      chipStatus.textContent = (discordOk ? 'Discord ✓' : 'Discord ✗') + ' · ' + (fivemOk ? 'FiveM ✓' : 'FiveM ✗');
+
+      if (canUseCoins()) {
+        loggedBannerText.textContent = 'Ingelogd — je kunt kopen met coins';
+        loggedBanner.classList.add('ready');
+      } else {
+        loggedBannerText.textContent = 'Ingelogd — koppel Discord + FiveM om te kopen';
+        loggedBanner.classList.remove('ready');
+      }
+
+      const avatar = me?.avatarUrl || sessionStorage.getItem('urpStoreAvatarUrl');
       if (avatar) {
         userAvatar.src = avatar;
         userAvatar.style.display = 'block';
+        chipAvatar.src = avatar;
+        chipAvatar.style.display = 'block';
+      } else {
+        userAvatar.style.display = 'none';
+        chipAvatar.style.display = 'none';
       }
+
+      btnLinkDiscord.classList.toggle('hidden', discordOk);
+      btnLink.classList.toggle('hidden', !discordOk || fivemOk);
+      navAdmin.style.display = me?.isAdmin ? 'inline' : 'none';
+    } else {
+      loggedBanner.classList.add('hidden');
+      sessionChip.classList.add('hidden');
     }
   }
 
@@ -111,8 +167,8 @@
     const recent = catalog.recentPurchases || [];
     if (recent.length) {
       recentList.innerHTML = recent
-        .map(
-          (r) =>
+        .map(function (r) {
+          return (
             '<li><span class="store-recent-user">' +
             esc(r.username) +
             '</span><span class="store-recent-product">' +
@@ -120,7 +176,8 @@
             '</span><span class="store-recent-time">' +
             formatTime(r.createdAt) +
             '</span></li>'
-        )
+          );
+        })
         .join('');
     } else {
       recentList.innerHTML = '<li class="store-recent-empty">Nog geen recente aankopen</li>';
@@ -130,25 +187,23 @@
   function renderCategoryTabs() {
     catTabs.innerHTML = '';
 
-    const coinsBtn = document.createElement('button');
-    coinsBtn.type = 'button';
-    coinsBtn.className = 'store-cat-tab' + (activeCat === COINS_TAB ? ' active' : '');
-    coinsBtn.textContent = 'Coins kopen';
-    coinsBtn.onclick = () => {
-      activeCat = COINS_TAB;
-      searchQuery = '';
-      searchInput.value = '';
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = 'store-cat-tab' + (activeCat === 'all' ? ' active' : '');
+    allBtn.textContent = 'Alles';
+    allBtn.onclick = function () {
+      activeCat = 'all';
       renderCategoryTabs();
       renderProducts();
     };
-    catTabs.appendChild(coinsBtn);
+    catTabs.appendChild(allBtn);
 
-    catalog.categories.forEach((c) => {
+    catalog.categories.forEach(function (c) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'store-cat-tab' + (activeCat === c.id ? ' active' : '');
       btn.textContent = c.name;
-      btn.onclick = () => {
+      btn.onclick = function () {
         activeCat = c.id;
         renderCategoryTabs();
         renderProducts();
@@ -159,7 +214,8 @@
 
   function buyLabel() {
     if (!isStoreLoggedIn()) return 'Log in';
-    if (!canUseCoins()) return 'Koppel FiveM';
+    if (!isStoreDiscordLinked()) return 'Koppel Discord';
+    if (!isStoreFivemLinked()) return 'Koppel FiveM';
     return 'Kopen';
   }
 
@@ -168,120 +224,50 @@
   }
 
   function filteredProducts() {
-    let items = catalog.products.filter((p) => activeCat === 'all' || p.categoryId === activeCat);
+    let items = catalog.products.filter(function (p) {
+      return activeCat === 'all' || p.categoryId === activeCat;
+    });
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      items = items.filter(
-        (p) =>
+      items = items.filter(function (p) {
+        return (
           (p.name || '').toLowerCase().includes(q) ||
           (p.description || '').toLowerCase().includes(q) ||
           (p.type || '').toLowerCase().includes(q)
-      );
+        );
+      });
     }
     return items;
   }
 
-  function filteredCoinPackages() {
-    if (!searchQuery.trim()) return coinPackages;
-    const q = searchQuery.trim().toLowerCase();
-    return coinPackages.filter(
-      (p) => (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q)
-    );
-  }
-
-  function openModal(product, isTebex) {
-    modalProduct = { ...product, isTebex: !!isTebex };
+  function openProductModal(product) {
     document.getElementById('modalImage').innerHTML = imageBlock(product.image, product.name);
-    document.getElementById('modalType').textContent = isTebex ? 'Tebex' : product.type || 'item';
+    document.getElementById('modalType').textContent = product.type || 'item';
     document.getElementById('modalTitle').textContent = product.name;
     document.getElementById('modalDesc').textContent = product.description || '';
-
-    const priceEl = document.getElementById('modalPrice');
+    document.getElementById('modalPrice').textContent = product.price + ' coins';
     const buyBtn = document.getElementById('modalBuy');
-
-    if (isTebex) {
-      const pct = discountPercent(product.salePrice, product.price);
-      priceEl.innerHTML =
-        (pct ? '<span class="store-card-badge" style="position:static;display:inline-block;margin-right:8px">-' + pct + '%</span>' : '') +
-        '<span class="store-price-eur">€' +
-        product.salePrice.toFixed(2) +
-        '</span>' +
-        (product.price > product.salePrice
-          ? ' <span class="store-price-old">€' + product.price.toFixed(2) + '</span>'
-          : '');
-      buyBtn.textContent = 'Kopen via Tebex';
-      buyBtn.disabled = false;
-      buyBtn.onclick = () => window.open(product.tebexUrl || tebexUrl, '_blank');
-    } else {
-      priceEl.textContent = product.price + ' coins';
-      buyBtn.textContent = buyLabel();
-      buyBtn.disabled = !canBuyProduct(product.price);
-      buyBtn.onclick = () => purchase(product.id);
-    }
-
+    buyBtn.textContent = buyLabel();
+    buyBtn.disabled = !canBuyProduct(product.price);
+    buyBtn.onclick = function () {
+      purchase(product.id);
+    };
     productModal.hidden = false;
     document.body.style.overflow = 'hidden';
   }
 
-  function closeModal() {
+  function closeProductModal() {
     productModal.hidden = true;
-    document.body.style.overflow = '';
-    modalProduct = null;
-  }
-
-  function renderCoinPackages() {
-    const items = filteredCoinPackages();
-    document.getElementById('emptyMsg').style.display = items.length ? 'none' : 'block';
-    productCount.textContent = items.length + ' pakketten';
-    grid.innerHTML = '';
-
-    items.forEach((p) => {
-      const pct = discountPercent(p.salePrice, p.price);
-      const card = document.createElement('article');
-      card.className = 'store-card store-card-tebex';
-      card.innerHTML =
-        '<div class="store-card-image">' +
-        (pct ? '<span class="store-card-badge">-' + pct + '%</span>' : '') +
-        '<span class="store-placeholder">🪙</span></div>' +
-        '<div class="store-card-body">' +
-        '<span class="type-badge">Tebex · ' +
-        p.coins +
-        ' coins</span>' +
-        '<h4>' +
-        esc(p.name) +
-        '</h4>' +
-        '<p>' +
-        esc(p.description) +
-        '</p>' +
-        '<div class="store-price-row">' +
-        '<span class="store-price store-price-eur">€' +
-        p.salePrice.toFixed(2) +
-        '</span>' +
-        (p.price > p.salePrice ? '<span class="store-price-old">€' + p.price.toFixed(2) + '</span>' : '') +
-        '</div>' +
-        '<div class="store-card-actions">' +
-        '<button type="button" class="btn-view" data-view>Bekijken</button>' +
-        '<button type="button" class="btn-buy" data-buy>Kopen via Tebex</button>' +
-        '</div></div>';
-
-      card.querySelector('[data-view]').onclick = () => openModal(p, true);
-      card.querySelector('[data-buy]').onclick = () => window.open(p.tebexUrl || tebexUrl, '_blank');
-      grid.appendChild(card);
-    });
+    if (loginModal.hidden) document.body.style.overflow = '';
   }
 
   function renderProducts() {
-    if (activeCat === COINS_TAB) {
-      renderCoinPackages();
-      return;
-    }
-
     const items = filteredProducts();
     document.getElementById('emptyMsg').style.display = items.length ? 'none' : 'block';
     productCount.textContent = items.length + ' producten';
     grid.innerHTML = '';
 
-    items.forEach((p) => {
+    items.forEach(function (p) {
       const pct = p.originalPrice ? discountPercent(p.price, p.originalPrice) : 0;
       const card = document.createElement('article');
       card.className = 'store-card';
@@ -289,42 +275,38 @@
         '<div class="store-card-image">' +
         (pct ? '<span class="store-card-badge">-' + pct + '%</span>' : '') +
         imageBlock(p.image, p.name) +
-        '</div>' +
-        '<div class="store-card-body">' +
-        '<span class="type-badge">' +
+        '</div><div class="store-card-body"><span class="type-badge">' +
         esc(p.type || 'item') +
-        '</span>' +
-        '<h4>' +
+        '</span><h4>' +
         esc(p.name) +
-        '</h4>' +
-        '<p>' +
+        '</h4><p>' +
         esc(p.description || '') +
-        '</p>' +
-        '<div class="store-price-row">' +
-        '<span class="store-price">' +
+        '</p><div class="store-price-row"><span class="store-price">' +
         p.price +
         ' coins</span>' +
         (p.originalPrice && p.originalPrice > p.price
           ? '<span class="store-price-old">' + p.originalPrice + ' coins</span>'
           : '') +
-        '</div>' +
-        '<div class="store-card-actions">' +
-        '<button type="button" class="btn-view">Bekijken</button>' +
-        '<button type="button" class="btn-buy">' +
+        '</div><div class="store-card-actions"><button type="button" class="btn-view">Bekijken</button><button type="button" class="btn-buy">' +
         buyLabel() +
         '</button></div></div>';
 
-      const buyBtn = card.querySelector('.btn-buy');
-      buyBtn.disabled = !canBuyProduct(p.price);
-      buyBtn.onclick = () => purchase(p.id);
-      card.querySelector('.btn-view').onclick = () => openModal(p, false);
+      card.querySelector('.btn-buy').disabled = !canBuyProduct(p.price);
+      card.querySelector('.btn-buy').onclick = function () {
+        purchase(p.id);
+      };
+      card.querySelector('.btn-view').onclick = function () {
+        openProductModal(p);
+      };
       grid.appendChild(card);
     });
   }
 
   async function loadCatalog() {
     catalog = await storeApi('/api/store');
-    if (catalog.me) setStoreSession({ ...catalog.me, accessToken: storeAccessToken(), linked: catalog.me.linked });
+    if (catalog.me) {
+      setStoreSession(Object.assign({}, catalog.me, { accessToken: storeAccessToken() }));
+    }
     updateAuthUI();
     renderWidgets();
     renderCategoryTabs();
@@ -333,40 +315,50 @@
 
   async function purchase(productId) {
     if (!isStoreLoggedIn()) {
-      showToast('Log eerst in met Discord.');
+      openLoginModal();
       return;
     }
     if (!canUseCoins()) {
-      showToast('Koppel FiveM via /koppelstore — coins vereisen Discord + FiveM.');
+      showToast('Koppel Discord + FiveM om te kunnen kopen.');
       return;
     }
     try {
       const res = await storeApi('/api/store-purchase', {
         method: 'POST',
-        body: { productId },
+        body: { productId: productId },
       });
       showToast(res.message || 'Aankoop gelukt!');
       catalog.me.coins = res.coins;
       updateAuthUI();
       renderProducts();
-      closeModal();
+      closeProductModal();
       await loadCatalog();
     } catch (e) {
       showToast(e.message);
     }
   }
 
-  btnLogin.onclick = () => {
-    window.location.href = getStoreDiscordAuthUrl(discordRedirectUri());
+  btnLogin.onclick = openLoginModal;
+  if (btnLoginHero) btnLoginHero.onclick = openLoginModal;
+  btnLogout.onclick = function () {
+    storeLogout();
   };
 
-  if (btnLoginHero) btnLoginHero.onclick = btnLogin.onclick;
+  document.getElementById('btnDiscordLogin').onclick = function () {
+    openDiscordLogin();
+  };
 
-  btnLogout.onclick = () => storeLogout();
+  btnLinkDiscord.onclick = function () {
+    openDiscordLogin(storeUserId() || null);
+  };
 
-  btnLink.onclick = async () => {
+  btnLink.onclick = async function () {
     if (!isStoreLoggedIn()) {
-      showToast('Log eerst in met Discord.');
+      openLoginModal();
+      return;
+    }
+    if (!isStoreDiscordLinked()) {
+      showToast('Koppel eerst Discord.');
       return;
     }
     try {
@@ -379,17 +371,69 @@
     }
   };
 
-  searchInput.addEventListener('input', () => {
+  document.querySelectorAll('.store-auth-tab').forEach(function (tab) {
+    tab.onclick = function () {
+      document.querySelectorAll('.store-auth-tab').forEach(function (t) {
+        t.classList.remove('active');
+      });
+      tab.classList.add('active');
+      const isDiscord = tab.dataset.authTab === 'discord';
+      document.getElementById('authPanelDiscord').classList.toggle('hidden', !isDiscord);
+      document.getElementById('authPanelEmail').classList.toggle('hidden', isDiscord);
+    };
+  });
+
+  document.getElementById('emailLoginForm').onsubmit = async function (e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await emailStoreAuth('login', {
+        email: fd.get('email'),
+        password: fd.get('password'),
+      });
+      closeLoginModal();
+      showToast('Ingelogd met e-mail — koppel Discord + FiveM om te kopen.');
+      await loadCatalog();
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+
+  document.getElementById('emailRegisterForm').onsubmit = async function (e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await emailStoreAuth('register', {
+        email: fd.get('email'),
+        password: fd.get('password'),
+        displayName: fd.get('displayName'),
+      });
+      closeLoginModal();
+      showToast('Account aangemaakt! Koppel nu Discord + FiveM.');
+      await loadCatalog();
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+
+  searchInput.addEventListener('input', function () {
     searchQuery = searchInput.value;
     renderProducts();
   });
 
-  modalClose.onclick = closeModal;
-  productModal.addEventListener('click', (e) => {
-    if (e.target === productModal) closeModal();
+  modalClose.onclick = closeProductModal;
+  loginModalClose.onclick = closeLoginModal;
+  productModal.addEventListener('click', function (e) {
+    if (e.target === productModal) closeProductModal();
   });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !productModal.hidden) closeModal();
+  loginModal.addEventListener('click', function (e) {
+    if (e.target === loginModal) closeLoginModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      closeProductModal();
+      closeLoginModal();
+    }
   });
 
   (async function init() {
@@ -398,6 +442,10 @@
     } catch (e) {
       showToast(e.message);
     }
-    await loadCatalog();
+    try {
+      await loadCatalog();
+    } catch (e) {
+      showToast(e.message);
+    }
   })();
 })();

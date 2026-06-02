@@ -16,7 +16,7 @@ async function exchangeCode(code, redirectUri) {
   const clientId = getClientId();
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
   if (!clientSecret) {
-    throw new Error('DISCORD_CLIENT_SECRET ontbreekt in Vercel (zelfde als staff-portaal).');
+    throw new Error('DISCORD_CLIENT_SECRET ontbreekt in Vercel.');
   }
 
   const body = new URLSearchParams({
@@ -43,7 +43,7 @@ async function getGuildMember(userId) {
   const token = process.env.DISCORD_BOT_TOKEN;
   const guildId = process.env.DISCORD_GUILD_ID;
   if (!token || !guildId) {
-    throw new Error('DISCORD_BOT_TOKEN en DISCORD_GUILD_ID zijn verplicht (zelfde als staff).');
+    throw new Error('DISCORD_BOT_TOKEN en DISCORD_GUILD_ID zijn verplicht.');
   }
 
   const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {

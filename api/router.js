@@ -10,6 +10,7 @@ const routes = {
   'store-link': require('../server/lib/routes/store-link'),
   'store-purchase': require('../server/lib/routes/store-purchase'),
   'store-admin': require('../server/lib/routes/store-admin'),
+  'store-email-auth': require('../server/lib/routes/store-email-auth'),
   'store-bridge': require('../server/lib/routes/store-bridge'),
 };
 

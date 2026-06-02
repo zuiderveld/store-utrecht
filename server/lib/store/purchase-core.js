@@ -6,7 +6,17 @@ function findUserByLicense(state, license) {
 }
 
 function findUserByDiscordId(state, discordId) {
-  return state.users?.[discordId] || null;
+  if (!discordId) return null;
+  if (state.users?.[discordId]) return state.users[discordId];
+  return Object.values(state.users || {}).find((u) => u.discordId === discordId) || null;
+}
+
+function findUserInState(state, userRef) {
+  if (!userRef) return null;
+  const id = userRef.userId || userRef.discordId;
+  if (id && state.users[id]) return state.users[id];
+  if (userRef.discordId) return findUserByDiscordId(state, userRef.discordId);
+  return Object.values(state.users || {}).find((u) => u.userId === id) || null;
 }
 
 function getProduct(state, productId) {
@@ -32,7 +42,8 @@ function createOrder(user, product, price) {
 function purchaseOne(state, user, productId) {
   const product = getProduct(state, productId);
   if (!product) throw new Error('Product niet gevonden');
-  if (!user.license) throw new Error('FiveM account niet gekoppeld — gebruik /koppelstore op de website');
+  if (!user.license) throw new Error('FiveM account niet gekoppeld — gebruik /koppelstore in-game');
+  if (!user.discordId) throw new Error('Discord account niet gekoppeld');
 
   const price = Number(product.price) || 0;
   const coins = Number(user.coins) || 0;
@@ -52,7 +63,8 @@ function purchaseCart(state, user, productIds) {
   if (!Array.isArray(productIds) || !productIds.length) {
     throw new Error('Geen producten geselecteerd');
   }
-  if (!user.license) throw new Error('FiveM account niet gekoppeld — gebruik /koppelstore op de website');
+  if (!user.license) throw new Error('FiveM account niet gekoppeld — gebruik /koppelstore in-game');
+  if (!user.discordId) throw new Error('Discord account niet gekoppeld');
 
   const unique = [...new Set(productIds)];
   const products = unique.map((id) => {
@@ -84,6 +96,7 @@ function purchaseCart(state, user, productIds) {
 module.exports = {
   findUserByLicense,
   findUserByDiscordId,
+  findUserInState,
   purchaseOne,
   purchaseCart,
 };
