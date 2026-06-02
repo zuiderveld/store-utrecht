@@ -81,18 +81,54 @@
     return (ids || []).join(', ') || 'geen';
   }
 
+  async function refreshAdminFromStore() {
+    try {
+      const data = await storeApi('/api/store');
+      if (!data.me) return null;
+      setStoreSession(Object.assign({}, data.me, { accessToken: storeAccessToken() }));
+      return data.me;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function openAdminApp() {
+    var gateHint = document.getElementById('adminGateHint');
+    if (gateHint) {
+      gateHint.classList.add('hidden');
+      gateHint.textContent = '';
+    }
+    showGate(false);
+    updateAdminHeader();
+  }
+
   async function refreshAdminAccess() {
     const gateHint = document.getElementById('adminGateHint');
 
     if (!isStoreLoggedIn()) {
       setGateHint(
-        'Stap 1: klik op de blauwe knop hieronder.\nStap 2: keur Discord goed.\nDaarna controleert de site je rol automatisch.'
+        'Je bent nog niet ingelogd. Ga naar de store en log in, of klik hieronder op Discord.'
       );
       showGate(true);
       return false;
     }
 
-    setGateHint('Beheer-rechten controleren…');
+    updateAdminHeader();
+    setGateHint('Ingelogd als ' + storeUserName() + ' — toegang controleren…');
+    showGate(true);
+
+    var me = await refreshAdminFromStore();
+    if (me && me.isAdmin) {
+      openAdminApp();
+      return true;
+    }
+
+    if (isStoreAdmin()) {
+      openAdminApp();
+      return true;
+    }
+
+    setGateHint('Beheer-rechten controleren via Discord…');
 
     try {
       const headers = { 'Content-Type': 'application/json' };
@@ -127,12 +163,7 @@
       });
 
       if (data.isAdmin === true || data.adminViaUserAllowlist) {
-        if (gateHint) {
-          gateHint.classList.add('hidden');
-          gateHint.textContent = '';
-        }
-        showGate(false);
-        updateAdminHeader();
+        openAdminApp();
         return true;
       }
 
@@ -165,12 +196,7 @@
         return false;
       }
 
-      if (gateHint) {
-        gateHint.classList.add('hidden');
-        gateHint.textContent = '';
-      }
-      showGate(false);
-      updateAdminHeader();
+      openAdminApp();
       return true;
     } catch (err) {
       if (gateHint) {
@@ -481,6 +507,13 @@
     }
   };
 
+  function normalizeOxItemName(name) {
+    var s = String(name || '').trim();
+    if (!s) return '';
+    if (s.toLowerCase().indexOf('weapon_') === 0) return s.toUpperCase();
+    return s.toLowerCase();
+  }
+
   document.getElementById('formProduct').onsubmit = async function (e) {
     e.preventDefault();
     try {
@@ -497,11 +530,11 @@
         active: document.getElementById('prodActive').checked,
         meta: {
           model: document.getElementById('prodModel').value.trim(),
-          garage: document.getElementById('prodGarage').value.trim() || 'pillboxgarage',
+          garage: document.getElementById('prodGarage').value.trim() || '2',
           topspeed: document.getElementById('prodTopspeed').value.trim(),
           trunk: document.getElementById('prodTrunk').value.trim(),
           location: document.getElementById('prodLocation').value.trim(),
-          item: document.getElementById('prodOxItem').value.trim(),
+          item: normalizeOxItemName(document.getElementById('prodOxItem').value),
           count: document.getElementById('prodItemCount').value.trim() || '1',
         },
       });
@@ -673,8 +706,7 @@
 
   function goDiscordLogin() {
     clearStoreSession();
-    var uri = window.location.origin + '/admin.html';
-    window.location.href = getStoreDiscordAuthUrl(uri);
+    window.location.href = getStoreDiscordAuthUrl(storeOAuthReturnUri(), null, 'admin');
   }
 
   btnLogin.onclick = goDiscordLogin;
@@ -690,7 +722,9 @@
         'Discord login mislukt: ' + (params.get('error_description') || params.get('error'))
       );
       setGateHint(
-        'Discord login mislukt. Voeg in Discord Developer Portal toe:\n' +
+        'Discord redirect ontbreekt. Voeg in Discord Developer Portal toe:\n' +
+          window.location.origin +
+          '/\n' +
           window.location.origin +
           '/admin.html'
       );
@@ -699,19 +733,7 @@
 
     if (params.get('code')) {
       setGateHint('Discord login verwerken…');
-      btnLoginGate.disabled = true;
-    }
-
-    try {
-      var health = await fetch(window.STORE_CONFIG.apiBase + '/api/health');
-      if (!health.ok) throw new Error('API offline');
-    } catch (e) {
-      setGateHint(
-        'Store API werkt niet — deploy op Vercel moet de map server/ bevatten (niet alleen HTML).'
-      );
-      showGate(true);
-      showToast('Backend API niet bereikbaar');
-      return;
+      if (btnLoginGate) btnLoginGate.disabled = true;
     }
 
     try {
@@ -744,6 +766,38 @@
     }
 
     if (btnLoginGate) btnLoginGate.disabled = false;
+
+    if (isStoreLoggedIn() && isStoreAdmin()) {
+      openAdminApp();
+      try {
+        await loadSnapshot();
+        syncProductTypeFields();
+      } catch (e) {
+        showToast(e.message);
+        if (!(await refreshAdminAccess())) return;
+        try {
+          await loadSnapshot();
+          syncProductTypeFields();
+        } catch (err) {
+          showToast(err.message);
+        }
+      }
+      return;
+    }
+
+    if (!params.get('code')) {
+      try {
+        var health = await fetch(window.STORE_CONFIG.apiBase + '/api/health');
+        if (!health.ok) throw new Error('API offline');
+      } catch (e) {
+        setGateHint(
+          'Store API werkt niet — deploy op Vercel moet de map server/ bevatten (niet alleen HTML).'
+        );
+        showGate(true);
+        showToast('Backend API niet bereikbaar');
+        return;
+      }
+    }
 
     if (!(await requireAdminPage())) return;
     try {

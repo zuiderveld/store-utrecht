@@ -139,6 +139,22 @@ local function resolveOwner(license)
     return license
 end
 
+local function resolveGarageId(garage)
+    if garage ~= nil and garage ~= '' then
+        local n = tonumber(garage)
+        if n and n > 0 then
+            return math.floor(n)
+        end
+    end
+
+    local defaultId = tonumber(Config.DefaultGarageId)
+    if defaultId and defaultId > 0 then
+        return math.floor(defaultId)
+    end
+
+    return 1
+end
+
 local function giveVehicle(license, model, garage)
     local modelHash = resolveModelHash(model)
     if not modelHash then
@@ -161,26 +177,31 @@ local function giveVehicle(license, model, garage)
         dirtLevel = 0.0,
     }
     local vehicleJson = json.encode(vehicleProps)
-    local parking = garage or Config.DefaultGarage
+    local garageSystem = Config.GarageSystem or 'minimal'
 
-    if Config.UseParkingColumn == false then
+    if garageSystem == 'cloud-garage' then
+        local garageId = resolveGarageId(garage)
         MySQL.insert.await(([[
-            INSERT INTO %s (%s, %s, %s, %s, %s)
-            VALUES (?, ?, ?, 'car', ?)
+            INSERT INTO %s (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, 'car', ?, ?, 0)
         ]]):format(
             Config.VehicleTable,
             Config.OwnerColumn,
             Config.PlateColumn,
             Config.VehicleColumn,
             Config.TypeColumn,
-            Config.StoredColumn
+            Config.StoredColumn,
+            Config.GarageIdColumn or 'garageid',
+            Config.PoundColumn or 'pound'
         ), {
             owner,
             plate,
             vehicleJson,
             Config.StoredInGarage,
+            garageId,
         })
-    else
+    elseif Config.UseParkingColumn then
+        local parking = garage or Config.DefaultGarage
         MySQL.insert.await(([[
             INSERT INTO %s (%s, %s, %s, %s, %s, %s)
             VALUES (?, ?, ?, 'car', ?, ?)
@@ -199,22 +220,61 @@ local function giveVehicle(license, model, garage)
             Config.StoredInGarage,
             parking,
         })
+    else
+        MySQL.insert.await(([[
+            INSERT INTO %s (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, 'car', ?)
+        ]]):format(
+            Config.VehicleTable,
+            Config.OwnerColumn,
+            Config.PlateColumn,
+            Config.VehicleColumn,
+            Config.TypeColumn,
+            Config.StoredColumn
+        ), {
+            owner,
+            plate,
+            vehicleJson,
+            Config.StoredInGarage,
+        })
     end
 
     local src = getSourceByLicense(license)
     if src then
-        notifyPlayer(src, ('Voertuig ontvangen! Kenteken %s — check je garage.'):format(plate))
+        local garageHint = ''
+        if garageSystem == 'cloud-garage' then
+            garageHint = (' (garage #%s)'):format(resolveGarageId(garage))
+        end
+        notifyPlayer(src, ('Voertuig ontvangen! Kenteken %s — check je garage%s.'):format(plate, garageHint))
     end
 
     return plate
 end
 
+local function normalizeOxItemName(name)
+    if not name or name == '' then return nil end
+    name = tostring(name):gsub('^%s+', ''):gsub('%s+$', '')
+    if name == '' then return nil end
+    if name:lower():sub(1, 7) == 'weapon_' then
+        return name:upper()
+    end
+    return name:lower()
+end
+
+local function oxItemExists(itemName)
+    local ok, item = pcall(function()
+        return exports.ox_inventory:Items(itemName)
+    end)
+    return ok and item ~= nil
+end
+
 local function giveStoreItem(order)
     local meta = order.meta or {}
-    local itemName = meta.item or meta.oxItem or meta.itemName
-    local count = tonumber(meta.count) or 1
+    local itemName = normalizeOxItemName(meta.item or meta.oxItem or meta.itemName)
+    local count = math.floor(tonumber(meta.count) or 1)
+    if count < 1 then count = 1 end
 
-    if not itemName or itemName == '' then
+    if not itemName then
         return false, 'no_item_configured'
     end
 
@@ -232,15 +292,34 @@ local function giveStoreItem(order)
         return false, 'ox_missing'
     end
 
+    if not oxItemExists(itemName) then
+        print(('[utrp_store] Onbekend ox item "%s" (order %s) — zet in admin meta.item exact zoals in ox_inventory/data/items.lua'):format(
+            itemName,
+            order.id or '?'
+        ))
+        return false, 'unknown_item:' .. itemName
+    end
+
     local itemMeta = meta.metadata or meta.extra
-    local added = exports.ox_inventory:AddItem(src, itemName, count, itemMeta)
+    if itemMeta and type(itemMeta) ~= 'table' then
+        itemMeta = nil
+    end
+
+    local canCarry = exports.ox_inventory:CanCarryItem(src, itemName, count, itemMeta)
+    if not canCarry then
+        notifyPlayer(src, 'Inventory vol — maak ruimte voor je store item.', 'error')
+        return false, 'inventory_full'
+    end
+
+    local added, err = exports.ox_inventory:AddItem(src, itemName, count, itemMeta)
 
     if added then
         notifyPlayer(src, ('Je hebt %sx %s ontvangen uit de store.'):format(count, order.productName or itemName))
         return true, ('item:%s x%d'):format(itemName, count)
     end
 
-    return false, 'inventory_full'
+    print(('[utrp_store] AddItem mislukt (%s) item=%s x%s speler=%s'):format(tostring(err), itemName, count, order.license))
+    return false, err or 'add_failed'
 end
 
 RegisterCommand('koppelstore', function(source, args)
@@ -350,7 +429,10 @@ local function processOrders()
         local note = ''
 
         if order.productType == 'vehicle' and order.meta and order.meta.model then
-            local garage = order.meta.garage or Config.DefaultGarage
+            local garage = order.meta.garage
+            if garage == nil or garage == '' then
+                garage = (Config.GarageSystem == 'cloud-garage') and Config.DefaultGarageId or Config.DefaultGarage
+            end
             local ok, result = pcall(giveVehicle, order.license, order.meta.model, garage)
             if ok and result then
                 done = true

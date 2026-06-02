@@ -34,8 +34,8 @@
     <div class="admin-gate-card">
         <div class="admin-gate-icon">🔐</div>
         <h2>Store beheer</h2>
-        <p id="adminGateText">Store beheer — log in met Discord.</p>
-        <p class="admin-gate-hint" id="adminGateHint">Stap 1: klik op de knop. Stap 2: keur Discord goed.</p>
+        <p id="adminGateText">Store beheer</p>
+        <p class="admin-gate-hint" id="adminGateHint">Al ingelogd op de store? Klik links op Store beheer — je hoeft niet opnieuw in te loggen.</p>
         <button type="button" class="btn-main" id="btnLoginGate">Inloggen met Discord</button>
     </div>
 </div>
@@ -128,7 +128,7 @@
                     </div>
                     <div class="admin-form-grid-prod vehicle-fields span-2" id="prodVehicleFields">
                     <label>Spawn model <input name="model" id="prodModel" placeholder="adder"></label>
-                    <label>Garage <input name="garage" id="prodGarage" placeholder="pillboxgarage"></label>
+                    <label>Garage ID <input name="garage" id="prodGarage" placeholder="2" title="cloud-garage: index in Config.Locations (2 = Rodegarage)"></label>
                     <label>Topsnelheid <input name="topspeed" id="prodTopspeed" placeholder="282"></label>
                     <label>Kofferbak <input name="trunk" id="prodTrunk" placeholder="100"></label>
                     <label class="span-2">Locatie <input name="location" id="prodLocation" placeholder="Vasteland"></label>
@@ -139,7 +139,7 @@
                     <div class="admin-form-grid-prod item-fields span-2" id="prodItemFields">
                     <label class="span-2">ox item naam <strong class="req">*</strong>
                         <input name="oxItem" id="prodOxItem" placeholder="bread" autocomplete="off">
-                        <span class="admin-field-hint">Exacte naam uit ox_inventory (bijv. <code>water</code>, <code>phone</code>)</span>
+                        <span class="admin-field-hint">Exacte key uit ox_inventory — bijv. <code>water</code>, <code>bread</code>, <code>burger</code>, <code>phone</code> (kleine letters)</span>
                     </label>
                     <label>Aantal <input name="itemCount" id="prodItemCount" type="number" min="1" placeholder="1" value="1"></label>
                     </div>

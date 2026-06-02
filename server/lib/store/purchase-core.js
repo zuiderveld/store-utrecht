@@ -30,8 +30,16 @@ function validateProductMeta(product) {
   if (type === 'vehicle' && !meta.model) {
     throw new Error(`${label}: mist spawn model (admin → meta.model)`);
   }
-  if (type === 'item' && !meta.item) {
-    throw new Error(`${label}: mist ox item naam (admin → meta.item)`);
+  if (type === 'item') {
+    if (!meta.item) {
+      throw new Error(`${label}: mist ox item naam (admin → meta.item, bijv. water)`);
+    }
+    const normalized = String(meta.item).trim();
+    if (normalized.toLowerCase().startsWith('weapon_')) {
+      meta.item = normalized.toUpperCase();
+    } else {
+      meta.item = normalized.toLowerCase();
+    }
   }
 }
 

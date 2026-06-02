@@ -25,11 +25,36 @@ ensure utrp_store
 ## Items (ox_inventory)
 
 Bij product type **item** in admin:
-- **ox item naam** = exacte naam in ox_inventory (bijv. `bread`)
-- **Aantal** = hoeveel stuks
 
-Speler moet **online** zijn op de server — item komt binnen ~3–5 sec in inventory.  
-Offline? Order blijft pending tot je inlogt.
+| Veld | Voorbeeld |
+|------|-----------|
+| **ox item naam** (`meta.item`) | `water` — key uit `data/items.lua`, kleine letters |
+| **Aantal** (`meta.count`) | `1` |
+
+Zie **`OX-ITEMS-URP.md`** voor URP-voorbeelden (water, bread, burger, phone, …).
+
+Speler moet **online** zijn — item binnen ~3–5 sec via `exports.ox_inventory:AddItem`.  
+Offline → order blijft *pending* tot je inlogt.
+
+## Voertuigen (cloud-garage)
+
+Bij product type **vehicle** in admin:
+
+| Veld | Voorbeeld |
+|------|-----------|
+| **Spawn model** (`meta.model`) | `adder` |
+| **Garage ID** (`meta.garage`) | `2` — index in cloud-garage `Config.Locations` |
+
+Zie **`CLOUD-GARAGE-URP.md`** voor garage-ID's en database-kolommen.
+
+Speler moet **online** zijn (ESX identifier) — anders faalt de garage-insert.
+
+**Veelvoorkomende fouten**
+
+- Admin leeg laten bij ox item → aankoop geblokkeerd of `no_item_configured`
+- `Water` i.p.v. `water` → nu automatisch lowercase
+- Item bestaat niet in ox → console: `Onbekend ox item`
+- Inventory vol → `inventory_full`, speler moet ruimte maken
 
 ## Koppelen speler
 

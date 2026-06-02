@@ -125,8 +125,17 @@ async function handleStoreOAuthCallback() {
     linkUserId = storeUserId();
   }
 
-  const redirectUri = discordRedirectUri();
+  const redirectUri =
+    state === 'admin' ? storeOAuthReturnUri() : discordRedirectUri();
   const data = await discordStoreAuthWithCode(code, linkUserId, redirectUri);
+
+  if (state === 'admin') {
+    window.history.replaceState({}, '', '/admin.html');
+    if (!window.location.pathname.includes('admin')) {
+      window.location.replace('/admin.html');
+    }
+    return data;
+  }
 
   const clean = window.location.pathname.includes('admin') ? '/admin.html' : '/';
   window.history.replaceState({}, '', clean);
