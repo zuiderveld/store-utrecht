@@ -9,6 +9,7 @@ const routes = {
   store: require('../server/lib/routes/store-catalog'),
   'store-link': require('../server/lib/routes/store-link'),
   'store-purchase': require('../server/lib/routes/store-purchase'),
+  'store-purchase-cart': require('../server/lib/routes/store-purchase-cart'),
   'store-admin': require('../server/lib/routes/store-admin'),
   'store-admin-auth': require('../server/lib/routes/store-admin-auth'),
   'store-email-auth': require('../server/lib/routes/store-email-auth'),

@@ -7,6 +7,7 @@
     { "source": "/api/store", "destination": "/api/router?route=store" },
     { "source": "/api/store-link", "destination": "/api/router?route=store-link" },
     { "source": "/api/store-purchase", "destination": "/api/router?route=store-purchase" },
+    { "source": "/api/store-purchase-cart", "destination": "/api/router?route=store-purchase-cart" },
     { "source": "/api/store-admin", "destination": "/api/router?route=store-admin" },
     { "source": "/api/store-admin-auth", "destination": "/api/router?route=store-admin-auth" },
     { "source": "/api/store-email-auth", "destination": "/api/router?route=store-email-auth" },

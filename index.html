@@ -56,6 +56,10 @@
                 <button type="button" class="store-dropdown-item store-dropdown-item-danger" id="btnLogout">Uitloggen</button>
             </div>
         </div>
+        <button type="button" class="store-cart-btn" id="btnCart" aria-label="Winkelwagen" title="Winkelwagen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M6 6L5 3H2"/></svg>
+            <span class="store-cart-badge" id="cartBadge">0</span>
+        </button>
         <button type="button" class="btn-main" id="btnLogin">Inloggen</button>
     </div>
 </header>
@@ -187,7 +191,7 @@
 
             <div class="store-widget">
                 <h3>Hoe werkt het?</h3>
-                <p class="store-widget-sub">1. Log in (Discord of e-mail)<br>2. Koppel Discord + FiveM<br>3. Koop met coins via website of /store in-game</p>
+                <p class="store-widget-sub">1. Log in (Discord of e-mail)<br>2. Koppel Discord + FiveM<br>3. Voeg toe aan winkelwagen en koop af</p>
             </div>
         </aside>
     </div>
@@ -236,9 +240,32 @@
             <h2 id="modalTitle"></h2>
             <p id="modalDesc"></p>
             <div class="store-modal-price" id="modalPrice"></div>
-            <button type="button" class="btn-buy" id="modalBuy">Kopen</button>
+            <button type="button" class="btn-buy" id="modalAddCart">In winkelwagen</button>
         </div>
     </div>
+</div>
+
+<div class="store-cart-drawer" id="cartDrawer" hidden>
+    <div class="store-cart-backdrop" id="cartBackdrop"></div>
+    <aside class="store-cart-panel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+        <div class="store-cart-head">
+            <h2 id="cartTitle">Winkelwagen</h2>
+            <button type="button" class="store-cart-close" id="cartClose" aria-label="Sluiten">&times;</button>
+        </div>
+        <ul class="store-cart-list" id="cartList"></ul>
+        <p class="store-cart-empty" id="cartEmpty">Je winkelwagen is leeg.</p>
+        <div class="store-cart-footer">
+            <div class="store-cart-summary">
+                <span>Items</span>
+                <strong id="cartItemCount">0</strong>
+            </div>
+            <div class="store-cart-summary">
+                <span>Totaal</span>
+                <strong id="cartTotal">0 coins</strong>
+            </div>
+            <button type="button" class="btn-buy store-cart-checkout" id="cartCheckout" disabled>Afrekenen</button>
+        </div>
+    </aside>
 </div>
 
 <div class="store-toast" id="toast"></div>

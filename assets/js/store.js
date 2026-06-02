@@ -40,10 +40,206 @@
   const btnDropdownLinkFivem = document.getElementById('btnDropdownLinkFivem');
   const loggedBanner = document.getElementById('loggedBanner');
   const loggedBannerText = document.getElementById('loggedBannerText');
+  const btnCart = document.getElementById('btnCart');
+  const cartBadge = document.getElementById('cartBadge');
+  const cartDrawer = document.getElementById('cartDrawer');
+  const cartBackdrop = document.getElementById('cartBackdrop');
+  const cartClose = document.getElementById('cartClose');
+  const cartList = document.getElementById('cartList');
+  const cartEmpty = document.getElementById('cartEmpty');
+  const cartItemCount = document.getElementById('cartItemCount');
+  const cartTotal = document.getElementById('cartTotal');
+  const cartCheckout = document.getElementById('cartCheckout');
 
   let catalog = { categories: [], products: [], me: null, recentPurchases: [], topBuyer: null };
   let activeCat = 'all';
   let searchQuery = '';
+  let cart = [];
+  const CART_KEY = 'urpStoreCart';
+
+  function loadCart() {
+    try {
+      const raw = sessionStorage.getItem(CART_KEY);
+      cart = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(cart)) cart = [];
+    } catch (_) {
+      cart = [];
+    }
+  }
+
+  function saveCart() {
+    sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+    updateCartUI();
+  }
+
+  function pruneCart() {
+    const valid = cart.filter(function (id) {
+      return Boolean(getProductById(id));
+    });
+    if (valid.length !== cart.length) {
+      cart = valid;
+      sessionStorage.setItem(CART_KEY, JSON.stringify(cart));
+    }
+  }
+
+  function getProductById(id) {
+    return catalog.products.find(function (p) {
+      return p.id === id;
+    });
+  }
+
+  function cartTotalCoins() {
+    return cart.reduce(function (sum, id) {
+      const p = getProductById(id);
+      return sum + (p ? Number(p.price) || 0 : 0);
+    }, 0);
+  }
+
+  function isInCart(productId) {
+    return cart.indexOf(productId) !== -1;
+  }
+
+  function updateCartUI() {
+    const count = cart.length;
+    cartBadge.textContent = count;
+    cartBadge.classList.toggle('hidden', count === 0);
+    btnCart.classList.toggle('has-items', count > 0);
+
+    const total = cartTotalCoins();
+    cartItemCount.textContent = count;
+    cartTotal.textContent = total + ' coins';
+    cartEmpty.style.display = count ? 'none' : 'block';
+    cartList.style.display = count ? 'block' : 'none';
+
+    cartList.innerHTML = cart
+      .map(function (id, index) {
+        const p = getProductById(id);
+        if (!p) {
+          return (
+            '<li class="store-cart-row store-cart-row-missing"><span>Product niet meer beschikbaar</span><button type="button" class="store-cart-remove" data-index="' +
+            index +
+            '" aria-label="Verwijderen">&times;</button></li>'
+          );
+        }
+        return (
+          '<li class="store-cart-row"><div class="store-cart-row-info"><strong>' +
+          esc(p.name) +
+          '</strong><span>' +
+          p.price +
+          ' coins</span></div><button type="button" class="store-cart-remove" data-index="' +
+          index +
+          '" aria-label="Verwijderen">&times;</button></li>'
+        );
+      })
+      .join('');
+
+    cartList.querySelectorAll('.store-cart-remove').forEach(function (btn) {
+      btn.onclick = function () {
+        cart.splice(Number(btn.dataset.index), 1);
+        saveCart();
+        renderProducts();
+      };
+    });
+
+    const canCheckout = count > 0 && canUseCoins() && (catalog.me?.coins || 0) >= total;
+    cartCheckout.disabled = !canCheckout;
+    cartCheckout.textContent = checkoutLabel(total);
+  }
+
+  function checkoutLabel(total) {
+    if (!cart.length) return 'Afrekenen';
+    if (!isStoreLoggedIn()) return 'Log in om af te rekenen';
+    if (!isStoreDiscordLinked()) return 'Koppel Discord';
+    if (!isStoreFivemLinked()) return 'Koppel FiveM';
+    if ((catalog.me?.coins || 0) < total) return 'Onvoldoende coins';
+    return 'Afrekenen (' + total + ' coins)';
+  }
+
+  function cartActionLabel() {
+    return 'In winkelwagen';
+  }
+
+  function canAddToCart(productId) {
+    return !isInCart(productId);
+  }
+
+  function openCart() {
+    updateCartUI();
+    cartDrawer.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeCart() {
+    cartDrawer.hidden = true;
+    if (productModal.hidden && loginModal.hidden) document.body.style.overflow = '';
+  }
+
+  function addToCart(productId) {
+    const product = getProductById(productId);
+    if (!product) {
+      showToast('Product niet gevonden.');
+      return;
+    }
+    if (isInCart(productId)) {
+      showToast('Staat al in je winkelwagen.');
+      openCart();
+      return;
+    }
+    cart.push(productId);
+    saveCart();
+    renderProducts();
+    showToast('Toegevoegd aan winkelwagen');
+  }
+
+  async function checkoutCart() {
+    if (!cart.length) {
+      showToast('Winkelwagen is leeg.');
+      return;
+    }
+    if (!isStoreLoggedIn()) {
+      openLoginModal();
+      return;
+    }
+    if (!canUseCoins()) {
+      showToast('Koppel Discord + FiveM om te kunnen kopen.');
+      return;
+    }
+    const total = cartTotalCoins();
+    if ((catalog.me?.coins || 0) < total) {
+      showToast('Onvoldoende coins.');
+      return;
+    }
+    const ids = cart.filter(function (id) {
+      return Boolean(getProductById(id));
+    });
+    if (!ids.length) {
+      showToast('Geen geldige producten in winkelwagen.');
+      cart = [];
+      saveCart();
+      return;
+    }
+    cartCheckout.disabled = true;
+    try {
+      const res = await storeApi('/api/store-purchase-cart', {
+        method: 'POST',
+        body: { productIds: ids },
+      });
+      cart = [];
+      saveCart();
+      closeCart();
+      closeProductModal();
+      showToast(res.message || 'Aankoop gelukt!');
+      catalog.me.coins = res.coins;
+      updateAuthUI();
+      renderProducts();
+      await loadCatalog();
+    } catch (e) {
+      showToast(e.message);
+    } finally {
+      cartCheckout.disabled = false;
+      updateCartUI();
+    }
+  }
 
   function showToast(msg) {
     toast.textContent = msg;
@@ -177,6 +373,7 @@
       btnLink.classList.toggle('hidden', !discordOk || fivemOk);
       btnDropdownLinkDiscord.classList.toggle('hidden', discordOk);
       btnDropdownLinkFivem.classList.toggle('hidden', !discordOk || fivemOk);
+      updateCartUI();
     } else {
       loggedBanner.classList.add('hidden');
       sessionMenu.classList.add('hidden');
@@ -248,17 +445,6 @@
     });
   }
 
-  function buyLabel() {
-    if (!isStoreLoggedIn()) return 'Log in';
-    if (!isStoreDiscordLinked()) return 'Koppel Discord';
-    if (!isStoreFivemLinked()) return 'Koppel FiveM';
-    return 'Kopen';
-  }
-
-  function canBuyProduct(price) {
-    return canUseCoins() && (catalog.me?.coins || 0) >= price;
-  }
-
   function filteredProducts() {
     let items = catalog.products.filter(function (p) {
       return activeCat === 'all' || p.categoryId === activeCat;
@@ -282,11 +468,13 @@
     document.getElementById('modalTitle').textContent = product.name;
     document.getElementById('modalDesc').textContent = product.description || '';
     document.getElementById('modalPrice').textContent = product.price + ' coins';
-    const buyBtn = document.getElementById('modalBuy');
-    buyBtn.textContent = buyLabel();
-    buyBtn.disabled = !canBuyProduct(product.price);
+    const buyBtn = document.getElementById('modalAddCart');
+    buyBtn.textContent = isInCart(product.id) ? 'In winkelwagen ✓' : cartActionLabel();
+    buyBtn.disabled = !canAddToCart(product.id);
     buyBtn.onclick = function () {
-      purchase(product.id);
+      addToCart(product.id);
+      buyBtn.textContent = 'In winkelwagen ✓';
+      buyBtn.disabled = true;
     };
     productModal.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -294,7 +482,7 @@
 
   function closeProductModal() {
     productModal.hidden = true;
-    if (loginModal.hidden) document.body.style.overflow = '';
+    if (loginModal.hidden && cartDrawer.hidden) document.body.style.overflow = '';
   }
 
   function renderProducts() {
@@ -324,12 +512,12 @@
           ? '<span class="store-price-old">' + p.originalPrice + ' coins</span>'
           : '') +
         '</div><div class="store-card-actions"><button type="button" class="btn-view">Bekijken</button><button type="button" class="btn-buy">' +
-        buyLabel() +
+        (isInCart(p.id) ? 'In winkelwagen ✓' : cartActionLabel()) +
         '</button></div></div>';
 
-      card.querySelector('.btn-buy').disabled = !canBuyProduct(p.price);
+      card.querySelector('.btn-buy').disabled = !canAddToCart(p.id);
       card.querySelector('.btn-buy').onclick = function () {
-        purchase(p.id);
+        addToCart(p.id);
       };
       card.querySelector('.btn-view').onclick = function () {
         openProductModal(p);
@@ -340,6 +528,7 @@
 
   async function loadCatalog() {
     catalog = await storeApi('/api/store');
+    pruneCart();
     if (catalog.me) {
       setStoreSession(Object.assign({}, catalog.me, { accessToken: storeAccessToken() }));
     }
@@ -347,6 +536,7 @@
     renderWidgets();
     renderCategoryTabs();
     renderProducts();
+    updateCartUI();
     lastKnownCoins = catalog.me?.coins ?? null;
     startLiveRefresh();
   }
@@ -386,6 +576,7 @@
 
       updateAuthUI();
       renderWidgets();
+      updateCartUI();
 
       if (
         prevCoins !== catalog.me?.coins ||
@@ -432,30 +623,10 @@
     }
   }
 
-  async function purchase(productId) {
-    if (!isStoreLoggedIn()) {
-      openLoginModal();
-      return;
-    }
-    if (!canUseCoins()) {
-      showToast('Koppel Discord + FiveM om te kunnen kopen.');
-      return;
-    }
-    try {
-      const res = await storeApi('/api/store-purchase', {
-        method: 'POST',
-        body: { productId: productId },
-      });
-      showToast(res.message || 'Aankoop gelukt!');
-      catalog.me.coins = res.coins;
-      updateAuthUI();
-      renderProducts();
-      closeProductModal();
-      await loadCatalog();
-    } catch (e) {
-      showToast(e.message);
-    }
-  }
+  btnCart.onclick = openCart;
+  cartClose.onclick = closeCart;
+  cartBackdrop.onclick = closeCart;
+  cartCheckout.onclick = checkoutCart;
 
   btnLogin.onclick = openLoginModal;
   if (btnLoginHero) btnLoginHero.onclick = openLoginModal;
@@ -596,8 +767,11 @@
     if (e.key === 'Escape') {
       closeProductModal();
       closeLoginModal();
+      closeCart();
     }
   });
+
+  loadCart();
 
   (async function init() {
     try {
