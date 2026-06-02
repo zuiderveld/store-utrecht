@@ -146,6 +146,19 @@ module.exports = async function handler(req, res) {
             }
             row.meta = { ...(row.meta || {}), discordRoleId: roleId };
           }
+          if (row.type === 'external_link') {
+            const url = String(row.meta?.externalUrl || row.meta?.url || '').trim();
+            if (!url || !/^https?:\/\//i.test(url)) {
+              throw new Error('Externe link vereist een geldige URL (https://…)');
+            }
+            row.meta = {
+              ...(row.meta || {}),
+              externalUrl: url,
+              buttonLabel: String(row.meta?.buttonLabel || 'Naar Discord').trim() || 'Naar Discord',
+            };
+            row.price = 0;
+            row.originalPrice = null;
+          }
           result.product = row;
           break;
         }

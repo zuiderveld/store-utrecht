@@ -54,6 +54,28 @@
     return d.innerHTML;
   }
 
+  function isExternalLinkProduct(p) {
+    return p && p.type === 'external_link';
+  }
+
+  function externalLinkUrl(p) {
+    return (p && p.meta && (p.meta.externalUrl || p.meta.url)) || '';
+  }
+
+  function externalLinkLabel(p) {
+    return (p && p.meta && p.meta.buttonLabel) || 'Naar Discord';
+  }
+
+  function openExternalLink(url) {
+    if (!url) {
+      showToast('Geen link geconfigureerd', 'error');
+      return;
+    }
+    post('openExternalLink', { url: url }).catch(function () {
+      showToast('Kon link niet openen', 'error');
+    });
+  }
+
   function imageHtml(image, name) {
     if (image) return '<img src="' + esc(image) + '" alt="">';
     return '<span class="ph">' + esc((name || '?').charAt(0).toUpperCase()) + '</span>';
@@ -134,7 +156,24 @@
     document.getElementById('detailImage').innerHTML = imageHtml(product.image, product.name);
     document.getElementById('detailTitle').textContent = product.name;
     document.getElementById('detailDesc').textContent = product.description || '';
+
+    const addBtn = document.getElementById('detailAddCart');
+    const external = isExternalLinkProduct(product);
+
+    if (external) {
+      document.getElementById('detailPrice').textContent = 'Geen coins — via link';
+      document.getElementById('detailStats').innerHTML = '';
+      addBtn.textContent = externalLinkLabel(product);
+      addBtn.className = 'btn-external-link';
+      addBtn.disabled = !externalLinkUrl(product);
+      addBtn.onclick = () => openExternalLink(externalLinkUrl(product));
+      return;
+    }
+
     document.getElementById('detailPrice').textContent = product.price + ' 🪙';
+    addBtn.textContent = '🛒';
+    addBtn.className = 'btn-cart-add';
+    addBtn.disabled = false;
 
     const meta = product.meta || {};
     const stats = [
@@ -153,17 +192,21 @@
       )
       .join('');
 
-    document.getElementById('detailAddCart').onclick = () => addToCart(product.id);
+    addBtn.onclick = () => addToCart(product.id);
   }
 
   function addToCart(productId) {
+    const product = state.products.find(function (x) {
+      return x.id === productId;
+    });
+    if (product && isExternalLinkProduct(product)) {
+      openExternalLink(externalLinkUrl(product));
+      return;
+    }
     if (!state.profile.linked) {
       showToast('Koppel eerst je account via store.utrechtroleplay.eu + /koppelstore', 'error');
       return;
     }
-    const product = state.products.find(function (x) {
-      return x.id === productId;
-    });
     if (product && product.type === 'item' && !(product.meta && product.meta.item)) {
       showToast('Dit item mist ox item naam in admin — kan niet gekocht worden', 'error');
       return;
@@ -211,8 +254,16 @@
     }
 
     items.forEach((p) => {
+      const external = isExternalLinkProduct(p);
       const card = document.createElement('article');
-      card.className = 'product-card' + (state.selected?.id === p.id ? ' selected' : '');
+      card.className = 'product-card' + (state.selected?.id === p.id ? ' selected' : '') + (external ? ' external-link' : '');
+      const footHtml = external
+        ? '<div class="foot"><span class="price external">Via link</span><button type="button" class="add external">' +
+          esc(externalLinkLabel(p)) +
+          '</button></div>'
+        : '<div class="foot"><span class="price">' +
+          p.price +
+          ' 🪙</span><button type="button" class="add">🛒</button></div>';
       card.innerHTML =
         '<div class="thumb">' +
         imageHtml(p.image, p.name) +
@@ -220,19 +271,28 @@
         esc(p.name) +
         '</h4><p>' +
         esc(p.description || '') +
-        '</p><div class="foot"><span class="price">' +
-        p.price +
-        ' 🪙</span><button type="button" class="add">🛒</button></div></div>';
+        '</p>' +
+        footHtml +
+        '</div>';
 
       card.onclick = (e) => {
         if (e.target.classList.contains('add')) return;
         showDetail(p);
         renderProducts();
       };
-      card.querySelector('.add').onclick = (e) => {
-        e.stopPropagation();
-        addToCart(p.id);
-      };
+      const addBtn = card.querySelector('.add');
+      if (external) {
+        addBtn.disabled = !externalLinkUrl(p);
+        addBtn.onclick = (e) => {
+          e.stopPropagation();
+          openExternalLink(externalLinkUrl(p));
+        };
+      } else {
+        addBtn.onclick = (e) => {
+          e.stopPropagation();
+          addToCart(p.id);
+        };
+      }
       productGrid.appendChild(card);
     });
   }

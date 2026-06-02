@@ -49,6 +49,14 @@ function validateProductMeta(product) {
     }
     meta.discordRoleId = roleId;
   }
+  if (type === 'external_link') {
+    const url = String(meta.externalUrl || meta.url || '').trim();
+    if (!url || !/^https?:\/\//i.test(url)) {
+      throw new Error(`${label}: externe link verplicht (https://…)`);
+    }
+    meta.externalUrl = url;
+    if (meta.buttonLabel) meta.buttonLabel = String(meta.buttonLabel).trim();
+  }
 }
 
 function mergeOrderMeta(state, order) {
@@ -89,6 +97,9 @@ function createOrder(user, product, price) {
 function purchaseOne(state, user, productId) {
   const product = getProduct(state, productId);
   if (!product) throw new Error('Product niet gevonden');
+  if (product.type === 'external_link') {
+    throw new Error('Dit product is alleen via externe link — geen coin-aankoop');
+  }
   validateProductMeta(product);
   if (!user.license) throw new Error('FiveM account niet gekoppeld — gebruik /koppelstore in-game');
   if (!user.discordId) throw new Error('Discord account niet gekoppeld');
@@ -118,6 +129,9 @@ function purchaseCart(state, user, productIds) {
   const products = unique.map((id) => {
     const p = getProduct(state, id);
     if (!p) throw new Error('Product niet gevonden: ' + id);
+    if (p.type === 'external_link') {
+      throw new Error('"' + (p.name || id) + '" is alleen via externe link — geen coin-aankoop');
+    }
     validateProductMeta(p);
     return p;
   });

@@ -110,6 +110,8 @@
     document.getElementById('prodTopspeed').value = '';
     document.getElementById('prodTrunk').value = '';
     document.getElementById('prodLocation').value = '';
+    document.getElementById('prodExternalUrl').value = '';
+    document.getElementById('prodExternalLabel').value = 'Naar Discord';
     document.getElementById('prodActive').checked = true;
     document.getElementById('prodType').value = 'vehicle';
     if (snapshot.categories.length) {
@@ -195,9 +197,12 @@
     const sectionVehicle = document.getElementById('prodSectionVehicle');
     const sectionItem = document.getElementById('prodSectionItem');
     const sectionDiscordRole = document.getElementById('prodSectionDiscordRole');
+    const sectionExternal = document.getElementById('prodSectionExternal');
+    const externalFields = document.getElementById('prodExternalFields');
     const showVehicle = type === 'vehicle';
     const showItem = type === 'item';
     const showDiscordRole = type === 'discord_role';
+    const showExternal = type === 'external_link';
 
     vehicleFields.classList.toggle('hidden', !showVehicle);
     sectionVehicle.classList.toggle('hidden', !showVehicle);
@@ -205,9 +210,18 @@
     sectionItem.classList.toggle('hidden', !showItem);
     discordRoleFields.classList.toggle('hidden', !showDiscordRole);
     sectionDiscordRole.classList.toggle('hidden', !showDiscordRole);
+    externalFields.classList.toggle('hidden', !showExternal);
+    sectionExternal.classList.toggle('hidden', !showExternal);
     document.getElementById('prodOxItem').required = showItem;
     document.getElementById('prodModel').required = showVehicle;
     document.getElementById('prodDiscordRoleId').required = showDiscordRole;
+    document.getElementById('prodExternalUrl').required = showExternal;
+    document.getElementById('prodPrice').required = !showExternal;
+    document.getElementById('prodPrice').disabled = showExternal;
+    if (showExternal && !document.getElementById('prodPrice').value) {
+      document.getElementById('prodPrice').value = '0';
+    }
+    document.getElementById('prodOriginalPriceWrap').classList.toggle('hidden', showExternal);
   }
 
   document.getElementById('prodType').addEventListener('change', syncProductTypeFields);
@@ -282,9 +296,12 @@
               (p.type === 'discord_role' && !(p.meta && p.meta.discordRoleId)
                 ? ' <span class="admin-status failed">geen rol-ID</span>'
                 : '') +
+              (p.type === 'external_link' && !(p.meta && p.meta.externalUrl)
+                ? ' <span class="admin-status failed">geen link</span>'
+                : '') +
               '</td><td>' +
-              p.price +
-              ' 🪙</td><td>' +
+              (p.type === 'external_link' ? 'Link' : p.price + ' 🪙') +
+              '</td><td>' +
               esc(p.type) +
               '</td><td><div class="admin-table-actions">' +
               '<button type="button" class="btn-sm btn-sm-edit" data-edit-prod="' +
@@ -426,6 +443,8 @@
           count: document.getElementById('prodItemCount').value.trim() || '1',
           discordRoleId: document.getElementById('prodDiscordRoleId').value.trim(),
           roleName: document.getElementById('prodDiscordRoleName').value.trim(),
+          externalUrl: document.getElementById('prodExternalUrl').value.trim(),
+          buttonLabel: document.getElementById('prodExternalLabel').value.trim() || 'Naar Discord',
         },
       });
       showToast('Product opgeslagen');
@@ -575,6 +594,8 @@
       document.getElementById('prodItemCount').value = p.meta?.count || '';
       document.getElementById('prodDiscordRoleId').value = p.meta?.discordRoleId || p.meta?.roleId || '';
       document.getElementById('prodDiscordRoleName').value = p.meta?.roleName || '';
+      document.getElementById('prodExternalUrl').value = p.meta?.externalUrl || p.meta?.url || '';
+      document.getElementById('prodExternalLabel').value = p.meta?.buttonLabel || 'Naar Discord';
       document.getElementById('prodGarage').value = p.meta?.garage || '';
       document.getElementById('prodTopspeed').value = p.meta?.topspeed || '';
       document.getElementById('prodTrunk').value = p.meta?.trunk || '';

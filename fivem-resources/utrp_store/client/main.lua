@@ -50,6 +50,21 @@ RegisterNUICallback('refreshProfile', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('openExternalLink', function(data, cb)
+    local url = type(data) == 'table' and data.url or nil
+    if type(url) ~= 'string' or not url:match('^https?://') then
+        cb({ ok = false, error = 'Ongeldige link' })
+        return
+    end
+
+    if GetResourceState('ox_lib') == 'started' then
+        exports.ox_lib:openUrl(url)
+    else
+        notify('Open in browser: ' .. url, 'inform')
+    end
+    cb({ ok = true })
+end)
+
 RegisterCommand(Config.OpenCommand or 'store', function()
     if isOpen then
         TriggerEvent('utrp_store:closeUI')

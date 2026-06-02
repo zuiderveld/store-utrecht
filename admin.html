@@ -127,11 +127,12 @@
                             <option value="vehicle">Voertuig (garage)</option>
                             <option value="item">Item (ox_inventory)</option>
                             <option value="discord_role">Discord rol</option>
+                            <option value="external_link">Externe link (geen coins)</option>
                             <option value="other">Overig</option>
                         </select>
                     </label>
                     <label>Prijs (coins) <input name="price" id="prodPrice" type="number" min="0" required></label>
-                    <label>Oude prijs <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
+                    <label id="prodOriginalPriceWrap">Oude prijs <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
                     <label class="span-2">Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
                     <label class="span-2">Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
                     <div class="admin-form-section span-2" id="prodSectionVehicle">
@@ -164,6 +165,18 @@
                     </label>
                     <label class="span-2">Rol naam (optioneel, alleen label)
                         <input name="discordRoleName" id="prodDiscordRoleName" placeholder="67dance">
+                    </label>
+                    </div>
+                    <div class="admin-form-section span-2" id="prodSectionExternal">
+                        <span>Doorverwijzing (geen coin-aankoop)</span>
+                    </div>
+                    <div class="admin-form-grid-prod external-link-fields span-2" id="prodExternalFields">
+                    <label class="span-2">Link URL <strong class="req">*</strong>
+                        <input name="externalUrl" id="prodExternalUrl" type="url" placeholder="https://discord.gg/jouw-server">
+                        <span class="admin-field-hint">Spelers zien een knop i.p.v. winkelwagen — geen coins, geen order.</span>
+                    </label>
+                    <label class="span-2">Knoptekst
+                        <input name="externalLabel" id="prodExternalLabel" placeholder="Naar Discord" value="Naar Discord">
                     </label>
                     </div>
                     <label class="admin-check span-2"><input type="checkbox" id="prodActive" checked> Product actief in store</label>

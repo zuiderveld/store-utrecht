@@ -88,6 +88,32 @@
     });
   }
 
+  function isExternalLinkProduct(p) {
+    return p && p.type === 'external_link';
+  }
+
+  function externalLinkUrl(p) {
+    return (p && p.meta && (p.meta.externalUrl || p.meta.url)) || '';
+  }
+
+  function externalLinkLabel(p) {
+    return (p && p.meta && p.meta.buttonLabel) || 'Naar Discord';
+  }
+
+  function typeLabel(p) {
+    if (isExternalLinkProduct(p)) return 'doorverwijzing';
+    return p.type || 'item';
+  }
+
+  function openExternalLink(p) {
+    const url = externalLinkUrl(p);
+    if (!url) {
+      showToast('Geen link geconfigureerd voor dit product.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   function cartTotalCoins() {
     return cart.reduce(function (sum, id) {
       const p = getProductById(id);
@@ -160,6 +186,8 @@
   }
 
   function canAddToCart(productId) {
+    const product = getProductById(productId);
+    if (!product || isExternalLinkProduct(product)) return false;
     return !isInCart(productId);
   }
 
@@ -178,6 +206,10 @@
     const product = getProductById(productId);
     if (!product) {
       showToast('Product niet gevonden.');
+      return;
+    }
+    if (isExternalLinkProduct(product)) {
+      openExternalLink(product);
       return;
     }
     if (isInCart(productId)) {
@@ -464,18 +496,31 @@
 
   function openProductModal(product) {
     document.getElementById('modalImage').innerHTML = imageBlock(product.image, product.name);
-    document.getElementById('modalType').textContent = product.type || 'item';
+    document.getElementById('modalType').textContent = typeLabel(product);
     document.getElementById('modalTitle').textContent = product.name;
     document.getElementById('modalDesc').textContent = product.description || '';
-    document.getElementById('modalPrice').textContent = product.price + ' coins';
     const buyBtn = document.getElementById('modalAddCart');
-    buyBtn.textContent = isInCart(product.id) ? 'In winkelwagen ✓' : cartActionLabel();
-    buyBtn.disabled = !canAddToCart(product.id);
-    buyBtn.onclick = function () {
-      addToCart(product.id);
-      buyBtn.textContent = 'In winkelwagen ✓';
-      buyBtn.disabled = true;
-    };
+    const external = isExternalLinkProduct(product);
+
+    if (external) {
+      document.getElementById('modalPrice').textContent = 'Geen coins — via link';
+      buyBtn.textContent = externalLinkLabel(product);
+      buyBtn.className = 'btn-buy btn-external';
+      buyBtn.disabled = !externalLinkUrl(product);
+      buyBtn.onclick = function () {
+        openExternalLink(product);
+      };
+    } else {
+      document.getElementById('modalPrice').textContent = product.price + ' coins';
+      buyBtn.textContent = isInCart(product.id) ? 'In winkelwagen ✓' : cartActionLabel();
+      buyBtn.className = 'btn-buy';
+      buyBtn.disabled = !canAddToCart(product.id);
+      buyBtn.onclick = function () {
+        addToCart(product.id);
+        buyBtn.textContent = 'In winkelwagen ✓';
+        buyBtn.disabled = true;
+      };
+    }
     productModal.hidden = false;
     document.body.style.overflow = 'hidden';
   }
@@ -493,32 +538,51 @@
 
     items.forEach(function (p) {
       const pct = p.originalPrice ? discountPercent(p.price, p.originalPrice) : 0;
+      const external = isExternalLinkProduct(p);
       const card = document.createElement('article');
-      card.className = 'store-card';
+      card.className = 'store-card' + (external ? ' store-card-external' : '');
+      const priceHtml = external
+        ? '<span class="store-price store-price-external">Via link</span>'
+        : '<span class="store-price">' +
+          p.price +
+          ' coins</span>' +
+          (p.originalPrice && p.originalPrice > p.price
+            ? '<span class="store-price-old">' + p.originalPrice + ' coins</span>'
+            : '');
+      const actionsHtml = external
+        ? '<button type="button" class="btn-view">Bekijken</button><button type="button" class="btn-external">' +
+          esc(externalLinkLabel(p)) +
+          '</button>'
+        : '<button type="button" class="btn-view">Bekijken</button><button type="button" class="btn-buy">' +
+          (isInCart(p.id) ? 'In winkelwagen ✓' : cartActionLabel()) +
+          '</button>';
       card.innerHTML =
         '<div class="store-card-image">' +
-        (pct ? '<span class="store-card-badge">-' + pct + '%</span>' : '') +
+        (pct && !external ? '<span class="store-card-badge">-' + pct + '%</span>' : '') +
         imageBlock(p.image, p.name) +
         '</div><div class="store-card-body"><span class="type-badge">' +
-        esc(p.type || 'item') +
+        esc(typeLabel(p)) +
         '</span><h4>' +
         esc(p.name) +
         '</h4><p>' +
         esc(p.description || '') +
-        '</p><div class="store-price-row"><span class="store-price">' +
-        p.price +
-        ' coins</span>' +
-        (p.originalPrice && p.originalPrice > p.price
-          ? '<span class="store-price-old">' + p.originalPrice + ' coins</span>'
-          : '') +
-        '</div><div class="store-card-actions"><button type="button" class="btn-view">Bekijken</button><button type="button" class="btn-buy">' +
-        (isInCart(p.id) ? 'In winkelwagen ✓' : cartActionLabel()) +
-        '</button></div></div>';
+        '</p><div class="store-price-row">' +
+        priceHtml +
+        '</div><div class="store-card-actions">' +
+        actionsHtml +
+        '</div></div>';
 
-      card.querySelector('.btn-buy').disabled = !canAddToCart(p.id);
-      card.querySelector('.btn-buy').onclick = function () {
-        addToCart(p.id);
-      };
+      if (external) {
+        card.querySelector('.btn-external').disabled = !externalLinkUrl(p);
+        card.querySelector('.btn-external').onclick = function () {
+          openExternalLink(p);
+        };
+      } else {
+        card.querySelector('.btn-buy').disabled = !canAddToCart(p.id);
+        card.querySelector('.btn-buy').onclick = function () {
+          addToCart(p.id);
+        };
+      }
       card.querySelector('.btn-view').onclick = function () {
         openProductModal(p);
       };
