@@ -59,9 +59,14 @@
                 </select>
             </label>
             <label>Prijs (coins) <input name="price" id="prodPrice" type="number" min="0" required></label>
+            <label>Oude prijs (optioneel, voor korting-badge) <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="bijv. 750"></label>
+            <label>Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
             <label>Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
             <label>Voertuig model (spawn) <input name="model" id="prodModel" placeholder="adder"></label>
             <label>Garage <input name="garage" id="prodGarage" placeholder="pillboxgarage"></label>
+            <label>Topsnelheid (NUI) <input name="topspeed" id="prodTopspeed" placeholder="282"></label>
+            <label>Kofferbak (NUI) <input name="trunk" id="prodTrunk" placeholder="100"></label>
+            <label>Locatie (NUI) <input name="location" id="prodLocation" placeholder="Vasteland"></label>
             <label><input type="checkbox" id="prodActive" checked> Actief</label>
             <button type="submit" class="btn-main">Product opslaan</button>
         </form>

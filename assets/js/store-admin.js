@@ -136,11 +136,16 @@
         name: document.getElementById('prodName').value,
         description: document.getElementById('prodDesc').value,
         price: document.getElementById('prodPrice').value,
+        originalPrice: document.getElementById('prodOriginalPrice').value || null,
+        image: document.getElementById('prodImage').value.trim(),
         type: document.getElementById('prodType').value,
         active: document.getElementById('prodActive').checked,
         meta: {
           model: document.getElementById('prodModel').value.trim(),
           garage: document.getElementById('prodGarage').value.trim() || 'pillboxgarage',
+          topspeed: document.getElementById('prodTopspeed').value.trim(),
+          trunk: document.getElementById('prodTrunk').value.trim(),
+          location: document.getElementById('prodLocation').value.trim(),
         },
       });
       showToast('Product opgeslagen');
@@ -200,9 +205,14 @@
       document.getElementById('prodCat').value = p.categoryId;
       document.getElementById('prodType').value = p.type;
       document.getElementById('prodPrice').value = p.price;
+      document.getElementById('prodOriginalPrice').value = p.originalPrice || '';
+      document.getElementById('prodImage').value = p.image || '';
       document.getElementById('prodDesc').value = p.description || '';
       document.getElementById('prodModel').value = p.meta?.model || '';
       document.getElementById('prodGarage').value = p.meta?.garage || '';
+      document.getElementById('prodTopspeed').value = p.meta?.topspeed || '';
+      document.getElementById('prodTrunk').value = p.meta?.trunk || '';
+      document.getElementById('prodLocation').value = p.meta?.location || '';
       document.getElementById('prodActive').checked = p.active !== false;
     }
     if (delProd && confirm('Product verwijderen?')) {

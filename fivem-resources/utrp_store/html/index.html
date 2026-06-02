@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URP Store</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app" class="hidden">
+    <div class="store-shell">
+        <header class="store-header">
+            <div class="brand">
+                <div class="brand-icon">U</div>
+                <span>Utrecht Roleplay Store</span>
+            </div>
+
+            <nav class="cat-nav" id="catNav"></nav>
+
+            <div class="header-actions">
+                <div class="coin-balance" id="coinBalance">
+                    <span class="coin-icon">🪙</span>
+                    <span id="coinAmount">0</span>
+                </div>
+                <button type="button" class="icon-btn cart-btn" id="btnCart" title="Winkelwagen">
+                    🛒
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </button>
+                <button type="button" class="icon-btn close-btn" id="btnClose" title="Sluiten">✕</button>
+            </div>
+        </header>
+
+        <div class="status-bar">
+            <span>🚗 Voertuigen direct in je garage</span>
+            <span>📦 Items direct beschikbaar</span>
+            <span>💙 Support Utrecht Roleplay</span>
+        </div>
+
+        <div class="store-body">
+            <aside class="sidebar" id="sidebarDetail">
+                <div class="sidebar-empty" id="sidebarEmpty">
+                    <div class="empty-icon">📦</div>
+                    <p>Selecteer een item om de details te bekijken</p>
+                </div>
+                <div class="sidebar-detail hidden" id="sidebarContent">
+                    <div class="detail-image" id="detailImage"></div>
+                    <h2 id="detailTitle"></h2>
+                    <p id="detailDesc"></p>
+                    <ul class="detail-stats" id="detailStats"></ul>
+                    <div class="detail-footer">
+                        <div class="detail-price" id="detailPrice"></div>
+                        <button type="button" class="btn-cart-add" id="detailAddCart">🛒</button>
+                    </div>
+                </div>
+
+                <div class="cart-panel hidden" id="cartPanel">
+                    <h3>Winkelwagen</h3>
+                    <ul class="cart-list" id="cartList"></ul>
+                    <div class="cart-summary">
+                        <div><span>Items</span><strong id="cartItems">0</strong></div>
+                        <div><span>Totaal</span><strong id="cartTotal">0 🪙</strong></div>
+                    </div>
+                    <button type="button" class="btn-checkout" id="btnCheckout">Afrekenen</button>
+                    <button type="button" class="btn-back" id="btnBackShop">← Terug naar shop</button>
+                </div>
+            </aside>
+
+            <main class="main-panel">
+                <div class="main-toolbar">
+                    <div>
+                        <h1 id="catTitle">Store</h1>
+                        <p id="catCount">0 items</p>
+                    </div>
+                    <input type="search" id="searchInput" placeholder="Zoeken…" autocomplete="off">
+                </div>
+                <div class="product-grid" id="productGrid"></div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal-backdrop hidden" id="confirmModal">
+        <div class="modal">
+            <h3>Bevestiging</h3>
+            <p id="confirmText"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="confirmCancel">Annuleren</button>
+                <button type="button" class="btn-confirm" id="confirmOk">Bevestigen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast hidden" id="toast"></div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

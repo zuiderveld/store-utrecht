@@ -1,7 +1,7 @@
-const crypto = require('crypto');
 const { cors, json, readBody } = require('../store/http');
 const { requireDiscordAndFivem } = require('../store/session');
 const { saveState } = require('../store/blob-store');
+const { findUserByDiscordId, purchaseOne } = require('../store/purchase-core');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -10,7 +10,6 @@ module.exports = async function handler(req, res) {
 
   try {
     const ctx = await requireDiscordAndFivem(req.headers.authorization);
-
     const body = await readBody(req);
     const productId = body.productId;
     if (!productId) return json(res, 400, { error: 'productId ontbreekt' });
@@ -19,34 +18,11 @@ module.exports = async function handler(req, res) {
     let newBalance = 0;
 
     await saveState((state) => {
-      const product = state.products.find((p) => p.id === productId && p.active !== false);
-      if (!product) throw new Error('Product niet gevonden');
-
-      const user = state.users[ctx.user.discordId];
+      const user = findUserByDiscordId(state, ctx.user.discordId);
       if (!user) throw new Error('Gebruiker niet gevonden');
-      const price = Number(product.price) || 0;
-      const coins = Number(user.coins) || 0;
-      if (coins < price) throw new Error('Onvoldoende coins');
-
-      user.coins = coins - price;
-      user.updatedAt = Date.now();
-      newBalance = user.coins;
-
-      order = {
-        id: 'ord_' + crypto.randomBytes(8).toString('hex'),
-        discordId: user.discordId,
-        license: user.license,
-        identifiers: user.identifiers || [],
-        productId: product.id,
-        productName: product.name,
-        productType: product.type || 'item',
-        price,
-        meta: product.meta || {},
-        status: 'pending',
-        createdAt: Date.now(),
-      };
-      state.orders.unshift(order);
-      if (state.orders.length > 500) state.orders = state.orders.slice(0, 500);
+      const result = purchaseOne(state, user, productId);
+      order = result.order;
+      newBalance = result.coins;
       return state;
     });
 

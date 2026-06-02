@@ -58,7 +58,7 @@ module.exports = async function handler(req, res) {
           break;
         }
         case 'product-save': {
-          const { id, categoryId, name, description, price, type, active, image, meta } = body;
+          const { id, categoryId, name, description, price, originalPrice, type, active, image, meta } = body;
           if (!name || !categoryId) throw new Error('Naam en categorie verplicht');
           const pid = id || 'prod_' + crypto.randomBytes(6).toString('hex');
           const row = {
@@ -67,6 +67,7 @@ module.exports = async function handler(req, res) {
             name,
             description: description || '',
             price: Number(price) || 0,
+            originalPrice: originalPrice ? Number(originalPrice) : null,
             type: type || 'item',
             active: active !== false,
             image: image || '',

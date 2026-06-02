@@ -1,5 +1,20 @@
 const { cors, json, readBody, checkBridgeKey } = require('../store/http');
 const { saveState, getState } = require('../store/blob-store');
+const { findUserByLicense, purchaseOne, purchaseCart } = require('../store/purchase-core');
+
+function mapProduct(p) {
+  return {
+    id: p.id,
+    categoryId: p.categoryId,
+    name: p.name,
+    description: p.description || '',
+    price: p.price,
+    originalPrice: p.originalPrice || null,
+    type: p.type || 'item',
+    image: p.image || '',
+    meta: p.meta || {},
+  };
+}
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -10,12 +25,43 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const action = req.query?.action || (await readBody(req)).action;
+    const action = req.query?.action || (req.method === 'POST' ? (await readBody(req)).action : null);
 
     if (action === 'health' || (!action && req.method === 'GET')) {
       const state = await getState();
       const pending = state.orders.filter((o) => o.status === 'pending').length;
       return json(res, 200, { ok: true, pending, ts: Date.now() });
+    }
+
+    if (action === 'catalog' && req.method === 'GET') {
+      const state = await getState();
+      const categories = [...state.categories].sort((a, b) => (a.sort || 0) - (b.sort || 0));
+      const products = state.products.filter((p) => p.active !== false).map(mapProduct);
+      return json(res, 200, { categories, products });
+    }
+
+    if (action === 'profile' && req.method === 'POST') {
+      const body = await readBody(req);
+      const license = body.license;
+      if (!license) return json(res, 400, { error: 'license verplicht' });
+
+      const state = await getState();
+      const user = findUserByLicense(state, license);
+      if (!user) {
+        return json(res, 200, {
+          linked: false,
+          coins: 0,
+          username: null,
+          message: 'Account niet gekoppeld. Log in op store.utrechtroleplay.eu en gebruik /koppelstore CODE',
+        });
+      }
+
+      return json(res, 200, {
+        linked: Boolean(user.license),
+        coins: user.coins || 0,
+        username: user.globalName || user.username || 'Speler',
+        discordId: user.discordId,
+      });
     }
 
     if (action === 'link' && req.method === 'POST') {
@@ -28,7 +74,6 @@ module.exports = async function handler(req, res) {
         return json(res, 400, { error: 'code en license verplicht' });
       }
 
-      let linked = false;
       await saveState((state) => {
         const entry = state.linkCodes[code];
         if (!entry || entry.expiresAt < Date.now()) {
@@ -42,11 +87,70 @@ module.exports = async function handler(req, res) {
         user.linkedAt = Date.now();
         user.updatedAt = Date.now();
         delete state.linkCodes[code];
-        linked = true;
         return state;
       });
 
       return json(res, 200, { ok: true, linked: true });
+    }
+
+    if (action === 'purchase' && req.method === 'POST') {
+      const body = await readBody(req);
+      const license = body.license;
+      const productId = body.productId;
+      if (!license || !productId) return json(res, 400, { error: 'license en productId verplicht' });
+
+      let order = null;
+      let coins = 0;
+
+      await saveState((state) => {
+        const user = findUserByLicense(state, license);
+        if (!user) throw new Error('Account niet gekoppeld — log in op de website en gebruik /koppelstore');
+        const result = purchaseOne(state, user, productId);
+        order = result.order;
+        coins = result.coins;
+        return state;
+      });
+
+      return json(res, 200, {
+        ok: true,
+        orderId: order.id,
+        coins,
+        message:
+          order.productType === 'vehicle'
+            ? 'Voertuig komt binnen enkele seconden in je garage.'
+            : 'Aankoop geplaatst.',
+      });
+    }
+
+    if (action === 'purchase-cart' && req.method === 'POST') {
+      const body = await readBody(req);
+      const license = body.license;
+      const productIds = body.productIds;
+      if (!license || !productIds?.length) {
+        return json(res, 400, { error: 'license en productIds verplicht' });
+      }
+
+      let orders = [];
+      let coins = 0;
+      let total = 0;
+
+      await saveState((state) => {
+        const user = findUserByLicense(state, license);
+        if (!user) throw new Error('Account niet gekoppeld — log in op de website en gebruik /koppelstore');
+        const result = purchaseCart(state, user, productIds);
+        orders = result.orders;
+        coins = result.coins;
+        total = result.total;
+        return state;
+      });
+
+      return json(res, 200, {
+        ok: true,
+        orderIds: orders.map((o) => o.id),
+        coins,
+        total,
+        message: 'Aankoop gelukt — items worden verwerkt.',
+      });
     }
 
     if (action === 'pending' && req.method === 'GET') {
@@ -84,7 +188,10 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ok: true });
     }
 
-    return json(res, 400, { error: 'Onbekende bridge actie', actions: ['health', 'link', 'pending', 'complete'] });
+    return json(res, 400, {
+      error: 'Onbekende bridge actie',
+      actions: ['health', 'catalog', 'profile', 'link', 'purchase', 'purchase-cart', 'pending', 'complete'],
+    });
   } catch (err) {
     console.error('store-bridge:', err);
     return json(res, 400, { error: err.message || 'Bridge fout' });

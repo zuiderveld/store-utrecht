@@ -43,9 +43,36 @@ Optioneel: `GRP_BRIDGE_API_KEY` als alias voor de bridge key.
 
 ## Spelerflow
 
-1. **Discord login** op de store-homepage
+1. **Discord login** op de store-homepage (of direct in-game)
 2. **Koppel FiveM** → knop op website → code → in-game: `/koppelstore CODE`
-3. **Kopen** met coins → order `pending` → FiveM resource zet voertuig in `owned_vehicles`
+3. **Kopen** met coins:
+   - **Website:** store.utrechtroleplay.eu
+   - **In-game:** `/store` — zelfde catalogus, winkelwagen, checkout
+4. Orders worden `pending` → FiveM resource zet voertuig in `owned_vehicles`
+
+## In-game store (`/store`)
+
+- Opent NUI met dezelfde producten als de website (via bridge API `catalog`)
+- Coins-saldo live van de gekoppelde Discord-account (`profile`)
+- Winkelwagen + bevestiging (zoals Vertex/Springbank)
+- Voertuigen komen direct in garage na checkout
+
+### Bridge endpoints (FiveM)
+
+Header: `X-Bridge-Key: <STORE_BRIDGE_API_KEY>`
+
+| Actie | Methode | Beschrijving |
+|-------|---------|--------------|
+| `health` | GET | Status + pending count |
+| `catalog` | GET | Categorieën + producten |
+| `profile` | POST `{ license }` | Coins + gekoppeld? |
+| `link` | POST | Koppelcode verwerken |
+| `purchase` | POST `{ license, productId }` | Enkel product |
+| `purchase-cart` | POST `{ license, productIds }` | Winkelwagen |
+| `pending` | GET | Openstaande orders |
+| `complete` | POST | Order afhandelen |
+
+Optioneel voertuig-stats in admin meta: `topspeed`, `trunk`, `location`
 
 ## FiveM resource
 
@@ -54,8 +81,9 @@ Map: `fivem-resources/utrp_store/`
 1. Kopieer naar `resources/[local]/utrp_store`
 2. Zet `Config.ApiKey` en `Config.ApiUrl`
 3. Vereist: **es_extended**, **oxmysql**
-4. Pas `config.lua` aan als je andere garage-kolomnamen gebruikt
+4. Pas `config.lua` aan: `ApiKey`, `ApiUrl`, `TebexUrl`
 5. `ensure utrp_store` in `server.cfg`
+6. In-game: `/store` — `/koppelstore CODE` voor eerste koppeling
 
 ## Admin
 

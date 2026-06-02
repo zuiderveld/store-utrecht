@@ -33,12 +33,12 @@ local function bridgeRequest(method, path, body)
     local p = promise.new()
 
     PerformHttpRequest(url, function(status, response)
+        local ok, data = pcall(json.decode, response or '{}')
         if status ~= 200 then
-            print(('[utrp_store] HTTP %s %s'):format(status, path))
-            p:resolve(nil)
+            print(('[utrp_store] HTTP %s %s — %s'):format(status, path, response or ''))
+            p:resolve(ok and data or { ok = false, error = 'HTTP ' .. tostring(status) })
             return
         end
-        local ok, data = pcall(json.decode, response or '{}')
         p:resolve(ok and data or nil)
     end, method, payload, {
         ['Content-Type'] = 'application/json',
@@ -65,6 +65,7 @@ local function giveVehicle(license, model, garage)
         Config.OwnerColumn,
         Config.PlateColumn,
         Config.VehicleColumn,
+        Config.TypeColumn,
         Config.StoredColumn,
         Config.ParkingColumn
     ), {
@@ -104,6 +105,70 @@ RegisterCommand('koppelstore', function(source, args)
         TriggerClientEvent('chat:addMessage', source, { args = { '^1Store', 'Koppelen mislukt — code verlopen of ongeldig.' } })
     end
 end, false)
+
+RegisterNetEvent('utrp_store:requestOpen', function()
+    local src = source
+    local license = getLicense(src)
+    if not license then
+        TriggerClientEvent('chat:addMessage', src, { args = { '^1Store', 'Geen license gevonden.' } })
+        return
+    end
+
+    local catalog = bridgeRequest('GET', '/api/store-bridge?action=catalog', nil)
+    local profile = bridgeRequest('POST', '/api/store-bridge?action=profile', { license = license })
+
+    if not catalog or not catalog.categories then
+        TriggerClientEvent('chat:addMessage', src, { args = { '^1Store', 'Store niet bereikbaar — controleer ApiUrl/ApiKey.' } })
+        return
+    end
+
+    TriggerClientEvent('utrp_store:openUI', src, {
+        categories = catalog.categories,
+        products = catalog.products,
+        profile = profile or { linked = false, coins = 0 },
+        storeWebUrl = Config.StoreWebUrl,
+        tebexUrl = Config.TebexUrl,
+    })
+end)
+
+ESX.RegisterServerCallback('utrp_store:getProfile', function(source, cb)
+    local license = getLicense(source)
+    if not license then
+        cb({ ok = false, error = 'Geen license' })
+        return
+    end
+    local profile = bridgeRequest('POST', '/api/store-bridge?action=profile', { license = license })
+    cb(profile or { ok = false })
+end)
+
+ESX.RegisterServerCallback('utrp_store:checkout', function(source, cb, productIds)
+    local license = getLicense(source)
+    if not license then
+        cb({ ok = false, error = 'Geen license gevonden' })
+        return
+    end
+
+    if type(productIds) ~= 'table' or #productIds == 0 then
+        cb({ ok = false, error = 'Winkelwagen is leeg' })
+        return
+    end
+
+    local result = bridgeRequest('POST', '/api/store-bridge?action=purchase-cart', {
+        license = license,
+        productIds = productIds,
+    })
+
+    if result and result.ok then
+        cb(result)
+        -- Direct verwerken zodat voertuigen meteen in garage komen
+        CreateThread(function()
+            Wait(500)
+            pcall(processOrders)
+        end)
+    else
+        cb({ ok = false, error = (result and result.error) or 'Aankoop mislukt' })
+    end
+end)
 
 local function processOrders()
     local data = bridgeRequest('GET', '/api/store-bridge?action=pending', nil)
