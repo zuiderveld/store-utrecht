@@ -24,11 +24,20 @@
   const loginModalClose = document.getElementById('loginModalClose');
   const heroActions = document.getElementById('heroActions');
   const btnLoginHero = document.getElementById('btnLoginHero');
-  const sessionChip = document.getElementById('sessionChip');
+  const sessionMenu = document.getElementById('sessionMenu');
+  const sessionChipToggle = document.getElementById('sessionChipToggle');
+  const sessionDropdown = document.getElementById('sessionDropdown');
   const chipName = document.getElementById('chipName');
   const chipStatus = document.getElementById('chipStatus');
   const chipCoins = document.getElementById('chipCoins');
   const chipAvatar = document.getElementById('chipAvatar');
+  const dropdownName = document.getElementById('dropdownName');
+  const dropdownStatus = document.getElementById('dropdownStatus');
+  const dropdownCoins = document.getElementById('dropdownCoins');
+  const dropdownAvatar = document.getElementById('dropdownAvatar');
+  const dropdownAdmin = document.getElementById('dropdownAdmin');
+  const btnDropdownLinkDiscord = document.getElementById('btnDropdownLinkDiscord');
+  const btnDropdownLinkFivem = document.getElementById('btnDropdownLinkFivem');
   const loggedBanner = document.getElementById('loggedBanner');
   const loggedBannerText = document.getElementById('loggedBannerText');
 
@@ -91,6 +100,23 @@
     document.body.style.overflow = '';
   }
 
+  function closeSessionMenu() {
+    sessionDropdown.hidden = true;
+    sessionChipToggle.setAttribute('aria-expanded', 'false');
+    sessionMenu.classList.remove('open');
+  }
+
+  function toggleSessionMenu() {
+    const open = sessionDropdown.hidden;
+    if (open) {
+      sessionDropdown.hidden = false;
+      sessionChipToggle.setAttribute('aria-expanded', 'true');
+      sessionMenu.classList.add('open');
+    } else {
+      closeSessionMenu();
+    }
+  }
+
   function updateAuthUI() {
     const me = catalog.me;
     const loggedIn = isStoreLoggedIn();
@@ -98,28 +124,32 @@
     const fivemOk = me?.fivemLinked || me?.linked || isStoreFivemLinked();
 
     btnLogin.style.display = loggedIn ? 'none' : 'inline-flex';
-    btnLogout.style.display = loggedIn ? 'inline-flex' : 'none';
     userBar.style.display = loggedIn ? 'flex' : 'none';
     if (heroActions) heroActions.style.display = loggedIn ? 'none' : 'flex';
 
     if (loggedIn) {
       loggedBanner.classList.remove('hidden');
-      sessionChip.classList.remove('hidden');
+      sessionMenu.classList.remove('hidden');
 
       const name = me?.username || storeUserName();
       const coins = me?.coins ?? sessionStorage.getItem('urpStoreCoins') ?? 0;
+      const statusText =
+        (discordOk ? 'Discord ✓' : 'Discord ✗') + ' · ' + (fivemOk ? 'FiveM ✓' : 'FiveM ✗');
 
       coinEl.textContent = coins;
       chipCoins.textContent = coins + ' 🪙';
       chipName.textContent = name;
       userName.textContent = name;
+      dropdownName.textContent = name;
+      dropdownCoins.textContent = coins + ' 🪙';
+      dropdownStatus.textContent = statusText;
 
       sessionStorage.setItem('urpStoreCoins', String(coins));
       sessionStorage.setItem('urpStoreFivemLinked', fivemOk ? 'true' : 'false');
       sessionStorage.setItem('urpStoreDiscordLinked', discordOk ? 'true' : 'false');
 
       statusBadges.innerHTML = badge(discordOk, 'Discord') + badge(fivemOk, 'FiveM');
-      chipStatus.textContent = (discordOk ? 'Discord ✓' : 'Discord ✗') + ' · ' + (fivemOk ? 'FiveM ✓' : 'FiveM ✗');
+      chipStatus.textContent = statusText;
 
       if (canUseCoins()) {
         loggedBannerText.textContent = 'Ingelogd — je kunt kopen met coins';
@@ -135,17 +165,24 @@
         userAvatar.style.display = 'block';
         chipAvatar.src = avatar;
         chipAvatar.style.display = 'block';
+        dropdownAvatar.src = avatar;
+        dropdownAvatar.style.display = 'block';
       } else {
         userAvatar.style.display = 'none';
         chipAvatar.style.display = 'none';
+        dropdownAvatar.style.display = 'none';
       }
 
       btnLinkDiscord.classList.toggle('hidden', discordOk);
       btnLink.classList.toggle('hidden', !discordOk || fivemOk);
+      btnDropdownLinkDiscord.classList.toggle('hidden', discordOk);
+      btnDropdownLinkFivem.classList.toggle('hidden', !discordOk || fivemOk);
+      dropdownAdmin.classList.toggle('hidden', !me?.isAdmin);
       navAdmin.style.display = me?.isAdmin ? 'inline' : 'none';
     } else {
       loggedBanner.classList.add('hidden');
-      sessionChip.classList.add('hidden');
+      sessionMenu.classList.add('hidden');
+      closeSessionMenu();
     }
   }
 
@@ -340,8 +377,52 @@
 
   btnLogin.onclick = openLoginModal;
   if (btnLoginHero) btnLoginHero.onclick = openLoginModal;
+
+  sessionChipToggle.onclick = function (e) {
+    e.stopPropagation();
+    toggleSessionMenu();
+  };
+
+  document.addEventListener('click', function () {
+    closeSessionMenu();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeSessionMenu();
+  });
+
+  sessionDropdown.addEventListener('click', function (e) {
+    e.stopPropagation();
+  });
+
   btnLogout.onclick = function () {
+    closeSessionMenu();
     storeLogout();
+  };
+
+  btnDropdownLinkDiscord.onclick = function () {
+    closeSessionMenu();
+    openDiscordLogin(storeUserId() || null);
+  };
+
+  btnDropdownLinkFivem.onclick = async function () {
+    closeSessionMenu();
+    if (!isStoreLoggedIn()) {
+      openLoginModal();
+      return;
+    }
+    if (!isStoreDiscordLinked()) {
+      showToast('Koppel eerst Discord.');
+      return;
+    }
+    try {
+      const res = await storeApi('/api/store-link', { method: 'POST' });
+      linkCode.textContent = '/koppelstore ' + res.code;
+      linkBox.style.display = 'block';
+      showToast('Ga in-game en typ het commando.');
+    } catch (e) {
+      showToast(e.message);
+    }
   };
 
   document.getElementById('btnDiscordLogin').onclick = function () {

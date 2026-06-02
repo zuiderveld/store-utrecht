@@ -27,16 +27,36 @@
     </nav>
     <div class="nav-buttons">
         <a href="https://discord.gg/rputrecht" class="btn-outline" target="_blank" rel="noopener">Discord</a>
-        <div class="store-session-chip hidden" id="sessionChip">
-            <img id="chipAvatar" class="store-avatar" alt="">
-            <div class="store-session-text">
-                <strong id="chipName">Speler</strong>
-                <span id="chipStatus"></span>
+        <div class="store-session-menu hidden" id="sessionMenu">
+            <button type="button" class="store-session-chip" id="sessionChipToggle" aria-haspopup="true" aria-expanded="false">
+                <img id="chipAvatar" class="store-avatar" alt="">
+                <div class="store-session-text">
+                    <strong id="chipName">Speler</strong>
+                    <span id="chipStatus"></span>
+                </div>
+                <span class="store-session-coins" id="chipCoins">0 🪙</span>
+                <svg class="store-session-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+            </button>
+            <div class="store-session-dropdown" id="sessionDropdown" hidden>
+                <div class="store-session-dropdown-head">
+                    <img id="dropdownAvatar" class="store-avatar" alt="">
+                    <div>
+                        <strong id="dropdownName">Speler</strong>
+                        <span id="dropdownStatus"></span>
+                    </div>
+                </div>
+                <div class="store-session-dropdown-balance">
+                    <span>Saldo</span>
+                    <strong id="dropdownCoins">0 🪙</strong>
+                </div>
+                <button type="button" class="store-dropdown-item hidden" id="btnDropdownLinkDiscord">Koppel Discord</button>
+                <button type="button" class="store-dropdown-item hidden" id="btnDropdownLinkFivem">Koppel FiveM</button>
+                <a href="admin.html" class="store-dropdown-item hidden" id="dropdownAdmin">Store beheer</a>
+                <hr class="store-dropdown-divider">
+                <button type="button" class="store-dropdown-item store-dropdown-item-danger" id="btnLogout">Uitloggen</button>
             </div>
-            <span class="store-session-coins" id="chipCoins">0 🪙</span>
         </div>
         <button type="button" class="btn-main" id="btnLogin">Inloggen</button>
-        <button type="button" class="btn-outline" id="btnLogout" style="display:none">Uitloggen</button>
     </div>
 </header>
 
