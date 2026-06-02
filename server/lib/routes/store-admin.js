@@ -2,12 +2,40 @@ const crypto = require('crypto');
 const { cors, json, readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
 const { saveState, getState } = require('../store/blob-store');
+const { findUser } = require('../store/auth-sessions');
 
 function slugify(s) {
   return String(s)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '') || 'cat';
+}
+
+function resolveAdminUser(state, { userId, discordId }) {
+  if (userId) {
+    const u = findUser(state, userId);
+    if (u) return u;
+  }
+  if (discordId) {
+    const u = findUser(state, discordId) || state.users[discordId];
+    if (u) return u;
+  }
+  return null;
+}
+
+function mapUserForAdmin(u) {
+  const userId = u.userId || u.discordId || null;
+  return {
+    userId,
+    discordId: u.discordId || null,
+    email: u.email || null,
+    username: u.globalName || u.displayName || u.username || 'Speler',
+    coins: u.coins || 0,
+    license: u.license || null,
+    linked: Boolean(u.license),
+    discordLinked: Boolean(u.discordId),
+    updatedAt: u.updatedAt || u.createdAt || 0,
+  };
 }
 
 module.exports = async function handler(req, res) {
@@ -24,13 +52,9 @@ module.exports = async function handler(req, res) {
       return json(res, 200, {
         categories: state.categories,
         products: state.products,
-        users: Object.values(state.users).map((u) => ({
-          discordId: u.discordId,
-          username: u.globalName || u.username,
-          coins: u.coins || 0,
-          license: u.license,
-          linked: Boolean(u.license),
-        })),
+        users: Object.values(state.users)
+          .map(mapUserForAdmin)
+          .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
         orders: state.orders.slice(0, 50),
       });
     }
@@ -83,31 +107,46 @@ module.exports = async function handler(req, res) {
           state.products = state.products.filter((p) => p.id !== body.id);
           break;
         }
-        case 'coins-set': {
-          const { discordId, coins } = body;
-          if (!discordId) throw new Error('discordId verplicht');
-          if (!state.users[discordId]) {
-            state.users[discordId] = {
-              discordId,
-              username: 'Onbekend',
+        case 'coins-set':
+        case 'user-save': {
+          const { userId, discordId, coins, username } = body;
+          let user = resolveAdminUser(state, { userId, discordId });
+
+          if (!user && discordId) {
+            const key = String(discordId).trim();
+            state.users[key] = {
+              userId: key,
+              discordId: key,
+              username: username && String(username).trim() ? String(username).trim() : 'Speler',
               coins: 0,
               license: null,
               identifiers: [],
+              createdAt: Date.now(),
             };
+            user = state.users[key];
           }
-          state.users[discordId].coins = Math.max(0, Number(coins) || 0);
-          state.users[discordId].updatedAt = Date.now();
-          result.user = state.users[discordId];
+
+          if (!user) throw new Error('Gebruiker niet gevonden — laat speler eerst inloggen op de store');
+
+          if (coins != null && coins !== '') {
+            user.coins = Math.max(0, Number(coins) || 0);
+          }
+          if (username && String(username).trim()) {
+            user.displayName = String(username).trim();
+            user.username = user.displayName;
+          }
+          user.updatedAt = Date.now();
+          result.user = mapUserForAdmin(user);
           break;
         }
         case 'coins-add': {
-          const { discordId, amount } = body;
-          if (!discordId) throw new Error('discordId verplicht');
-          if (!state.users[discordId]) throw new Error('Gebruiker niet gevonden — eerst laten inloggen');
+          const { userId, discordId, amount } = body;
+          const user = resolveAdminUser(state, { userId, discordId });
+          if (!user) throw new Error('Gebruiker niet gevonden');
           const add = Number(amount) || 0;
-          state.users[discordId].coins = (Number(state.users[discordId].coins) || 0) + add;
-          state.users[discordId].updatedAt = Date.now();
-          result.user = state.users[discordId];
+          user.coins = (Number(user.coins) || 0) + add;
+          user.updatedAt = Date.now();
+          result.user = mapUserForAdmin(user);
           break;
         }
         default:

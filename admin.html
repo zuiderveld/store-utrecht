@@ -21,70 +21,183 @@
         <a href="https://www.utrechtroleplay.eu/" target="_blank" rel="noopener">Website</a>
     </nav>
     <div class="nav-buttons">
-        <button type="button" class="btn-outline" id="btnLogin">Discord login</button>
+        <div class="admin-session-chip hidden" id="adminSession">
+            <img id="adminAvatar" class="store-avatar" alt="">
+            <span id="adminUserName">Beheerder</span>
+        </div>
+        <button type="button" class="btn-main" id="btnLogin">Discord login</button>
+        <button type="button" class="btn-outline hidden" id="btnLogout">Uitloggen</button>
     </div>
 </header>
 
-<div class="admin-wrap">
-    <h1 style="margin-bottom:8px">Store beheer</h1>
-    <p style="color:rgba(234,240,255,.6);margin-bottom:24px">Discord-login vereist. Beheer via store-admin rollen (DISCORD_STORE_ADMIN_ROLES).</p>
+<div class="admin-gate" id="adminGate">
+    <div class="admin-gate-card">
+        <div class="admin-gate-icon">🔐</div>
+        <h2>Store beheer</h2>
+        <p>Log in met Discord. Alleen accounts met <strong>DISCORD_STORE_ADMIN_ROLES</strong> hebben toegang.</p>
+        <button type="button" class="btn-main" id="btnLoginGate">Inloggen met Discord</button>
+    </div>
+</div>
+
+<div class="admin-wrap hidden" id="adminApp">
+    <section class="admin-hero">
+        <div>
+            <h1>Dashboard</h1>
+            <p>Beheer categorieën, producten, coins en orders voor de URP Store (website + in-game).</p>
+        </div>
+        <button type="button" class="btn-outline admin-refresh" id="btnRefresh">↻ Vernieuwen</button>
+    </section>
+
+    <div class="admin-stats" id="adminStats">
+        <div class="admin-stat-card">
+            <span class="admin-stat-label">Categorieën</span>
+            <strong id="statCategories">0</strong>
+        </div>
+        <div class="admin-stat-card">
+            <span class="admin-stat-label">Producten</span>
+            <strong id="statProducts">0</strong>
+        </div>
+        <div class="admin-stat-card">
+            <span class="admin-stat-label">Spelers</span>
+            <strong id="statUsers">0</strong>
+        </div>
+        <div class="admin-stat-card">
+            <span class="admin-stat-label">Orders</span>
+            <strong id="statOrders">0</strong>
+        </div>
+    </div>
 
     <div class="admin-tabs">
-        <button type="button" data-tab="categories" class="active">Categorieën</button>
-        <button type="button" data-tab="products">Producten</button>
-        <button type="button" data-tab="coins">Coins</button>
-        <button type="button" data-tab="orders">Orders</button>
+        <button type="button" data-tab="categories" class="active"><span>📁</span> Categorieën</button>
+        <button type="button" data-tab="products"><span>📦</span> Producten</button>
+        <button type="button" data-tab="coins"><span>🪙</span> Coins</button>
+        <button type="button" data-tab="orders"><span>🧾</span> Orders</button>
     </div>
 
     <div id="panel-categories" class="admin-panel active">
-        <form class="admin-form" id="formCategory">
-            <input type="hidden" name="id" id="catId">
-            <label>Naam <input name="name" id="catName" required></label>
-            <label>Sorteer <input name="sort" id="catSort" type="number" value="0"></label>
-            <button type="submit" class="btn-main">Categorie opslaan</button>
-        </form>
-        <table class="admin-table"><thead><tr><th>ID</th><th>Naam</th><th></th></tr></thead><tbody id="catTable"></tbody></table>
+        <div class="admin-grid">
+            <div class="admin-card">
+                <div class="admin-card-head">
+                    <h3>Nieuwe categorie</h3>
+                    <button type="button" class="admin-btn-ghost" id="btnResetCat">Leegmaken</button>
+                </div>
+                <form class="admin-form" id="formCategory">
+                    <input type="hidden" name="id" id="catId">
+                    <label>Naam <input name="name" id="catName" required placeholder="bijv. Voertuigen"></label>
+                    <label>Sorteer <input name="sort" id="catSort" type="number" value="0"></label>
+                    <button type="submit" class="btn-main">Categorie opslaan</button>
+                </form>
+            </div>
+            <div class="admin-card admin-card-wide">
+                <div class="admin-card-head"><h3>Alle categorieën</h3></div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead><tr><th>ID</th><th>Naam</th><th>Sort</th><th></th></tr></thead>
+                        <tbody id="catTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="panel-products" class="admin-panel">
-        <form class="admin-form" id="formProduct">
-            <input type="hidden" name="id" id="prodId">
-            <label>Naam <input name="name" id="prodName" required></label>
-            <label>Categorie <select name="categoryId" id="prodCat" required></select></label>
-            <label>Type
-                <select name="type" id="prodType">
-                    <option value="vehicle">vehicle (garage)</option>
-                    <option value="item">item</option>
-                    <option value="other">other</option>
-                </select>
-            </label>
-            <label>Prijs (coins) <input name="price" id="prodPrice" type="number" min="0" required></label>
-            <label>Oude prijs (optioneel, voor korting-badge) <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="bijv. 750"></label>
-            <label>Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
-            <label>Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
-            <label>Voertuig model (spawn) <input name="model" id="prodModel" placeholder="adder"></label>
-            <label>Garage <input name="garage" id="prodGarage" placeholder="pillboxgarage"></label>
-            <label>Topsnelheid (NUI) <input name="topspeed" id="prodTopspeed" placeholder="282"></label>
-            <label>Kofferbak (NUI) <input name="trunk" id="prodTrunk" placeholder="100"></label>
-            <label>Locatie (NUI) <input name="location" id="prodLocation" placeholder="Vasteland"></label>
-            <label><input type="checkbox" id="prodActive" checked> Actief</label>
-            <button type="submit" class="btn-main">Product opslaan</button>
-        </form>
-        <table class="admin-table"><thead><tr><th>Naam</th><th>Prijs</th><th>Type</th><th></th></tr></thead><tbody id="prodTable"></tbody></table>
+        <div class="admin-grid admin-grid-products">
+            <div class="admin-card">
+                <div class="admin-card-head">
+                    <h3 id="productFormTitle">Nieuw product</h3>
+                    <button type="button" class="admin-btn-ghost" id="btnResetProd">Leegmaken</button>
+                </div>
+                <form class="admin-form admin-form-grid" id="formProduct">
+                    <input type="hidden" name="id" id="prodId">
+                    <label class="span-2">Naam <input name="name" id="prodName" required placeholder="Productnaam"></label>
+                    <label>Categorie <select name="categoryId" id="prodCat" required></select></label>
+                    <label>Type
+                        <select name="type" id="prodType">
+                            <option value="vehicle">Voertuig (garage)</option>
+                            <option value="item">Item</option>
+                            <option value="other">Overig</option>
+                        </select>
+                    </label>
+                    <label>Prijs (coins) <input name="price" id="prodPrice" type="number" min="0" required></label>
+                    <label>Oude prijs <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
+                    <label class="span-2">Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
+                    <label class="span-2">Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
+                    <div class="admin-form-section span-2">
+                        <span>Voertuig / in-game (optioneel)</span>
+                    </div>
+                    <label>Spawn model <input name="model" id="prodModel" placeholder="adder"></label>
+                    <label>Garage <input name="garage" id="prodGarage" placeholder="pillboxgarage"></label>
+                    <label>Topsnelheid <input name="topspeed" id="prodTopspeed" placeholder="282"></label>
+                    <label>Kofferbak <input name="trunk" id="prodTrunk" placeholder="100"></label>
+                    <label class="span-2">Locatie <input name="location" id="prodLocation" placeholder="Vasteland"></label>
+                    <label class="admin-check span-2"><input type="checkbox" id="prodActive" checked> Product actief in store</label>
+                    <button type="submit" class="btn-main span-2">Product opslaan</button>
+                </form>
+            </div>
+            <div class="admin-card">
+                <div class="admin-card-head"><h3>Catalogus</h3></div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead><tr><th>Product</th><th>Prijs</th><th>Type</th><th></th></tr></thead>
+                        <tbody id="prodTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="panel-coins" class="admin-panel">
-        <form class="admin-form" id="formCoins">
-            <label>Discord user ID <input name="discordId" id="coinDiscordId" required placeholder="123456789012345678"></label>
-            <label>Coins instellen <input name="coins" id="coinAmount" type="number" min="0"></label>
-            <button type="submit" class="btn-main">Coins opslaan</button>
-            <button type="button" class="btn-outline" id="btnCoinAdd">+100 coins</button>
-        </form>
-        <table class="admin-table"><thead><tr><th>Gebruiker</th><th>Coins</th><th>License</th></tr></thead><tbody id="userTable"></tbody></table>
+        <div class="admin-grid">
+            <div class="admin-card">
+                <div class="admin-card-head">
+                    <h3 id="userFormTitle">Speler bewerken</h3>
+                    <button type="button" class="admin-btn-ghost" id="btnResetUser">Leegmaken</button>
+                </div>
+                <div class="admin-user-selected hidden" id="userSelectedHint"></div>
+                <form class="admin-form" id="formCoins">
+                    <input type="hidden" id="coinUserId">
+                    <label>Weergavenaam <input name="username" id="coinUsername" placeholder="Optioneel aanpassen"></label>
+                    <label>E-mail <input id="coinEmail" readonly placeholder="—" class="readonly"></label>
+                    <label>Discord ID <input name="discordId" id="coinDiscordId" placeholder="123456789012345678"></label>
+                    <label>User ID <input id="coinInternalId" readonly placeholder="—" class="readonly mono-field"></label>
+                    <label>Coins <input name="coins" id="coinAmount" type="number" min="0" required></label>
+                    <div class="admin-quick-coins">
+                        <span>Snel toevoegen:</span>
+                        <button type="button" class="btn-outline btn-sm-quick" data-add-coins="50">+50</button>
+                        <button type="button" class="btn-outline btn-sm-quick" data-add-coins="100">+100</button>
+                        <button type="button" class="btn-outline btn-sm-quick" data-add-coins="500">+500</button>
+                    </div>
+                    <div class="admin-form-actions">
+                        <button type="submit" class="btn-main">Opslaan</button>
+                    </div>
+                </form>
+                <p class="admin-hint">Klik op <strong>Bewerk</strong> bij een speler in de lijst, pas coins aan en sla op. Nieuwe speler? Vul Discord ID in (moet eerst 1× ingelogd hebben, tenzij je handmatig aanmaakt).</p>
+            </div>
+            <div class="admin-card admin-card-wide">
+                <div class="admin-card-head">
+                    <h3>Spelers</h3>
+                    <input type="search" class="admin-search" id="userSearch" placeholder="Zoek naam, e-mail, ID…">
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead><tr><th>Gebruiker</th><th>Coins</th><th>FiveM</th><th>Discord</th><th></th></tr></thead>
+                        <tbody id="userTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="panel-orders" class="admin-panel">
-        <table class="admin-table"><thead><tr><th>ID</th><th>Product</th><th>Status</th><th>License</th></tr></thead><tbody id="orderTable"></tbody></table>
+        <div class="admin-card">
+            <div class="admin-card-head"><h3>Recente orders</h3></div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead><tr><th>Order</th><th>Product</th><th>Status</th><th>License</th></tr></thead>
+                    <tbody id="orderTable"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 

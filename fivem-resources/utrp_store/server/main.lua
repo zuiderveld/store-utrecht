@@ -81,11 +81,13 @@ end
 
 RegisterCommand('koppelstore', function(source, args)
     if source == 0 then return end
-    local code = args[1]
-    if not code or #code < 4 then
-        TriggerClientEvent('chat:addMessage', source, { args = { '^1Store', 'Gebruik: /koppelstore CODE (van de website)' } })
+    local raw = table.concat(args, ' ')
+    if not raw or #raw < 4 then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1Store', 'Gebruik: /koppelstore CODE (alleen de code van de website)' } })
         return
     end
+
+    local code = string.upper(raw:gsub('/koppelstore%s*', ''):gsub('%s+', ''):sub(1, 6))
 
     local license = getLicense(source)
     if not license then
@@ -94,7 +96,7 @@ RegisterCommand('koppelstore', function(source, args)
     end
 
     local data = bridgeRequest('POST', '/api/store-bridge?action=link', {
-        code = string.upper(code),
+        code = code,
         license = license,
         identifiers = getIdentifiers(source),
     })
@@ -102,7 +104,11 @@ RegisterCommand('koppelstore', function(source, args)
     if data and data.ok then
         TriggerClientEvent('chat:addMessage', source, { args = { '^2Store', 'FiveM account gekoppeld aan de URP Store!' } })
     else
-        TriggerClientEvent('chat:addMessage', source, { args = { '^1Store', 'Koppelen mislukt — code verlopen of ongeldig.' } })
+        local msg = (data and data.error) or 'Geen verbinding met store API'
+        if msg:find('bridge') or msg:find('401') or msg:find('Ongeldige') then
+            msg = 'Store API key/URL fout — check config.lua + Vercel STORE_BRIDGE_API_KEY'
+        end
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1Store', 'Koppelen mislukt: ' .. msg } })
     end
 end, false)
 
@@ -215,8 +221,10 @@ CreateThread(function()
     Wait(3000)
     local health = bridgeRequest('GET', '/api/store-bridge?action=health', nil)
     if health and health.ok then
-        print('[utrp_store] Bridge verbonden — pending orders: ' .. tostring(health.pending or 0))
+        print(('[utrp_store] Bridge OK (%s) — pending orders: %s'):format(Config.ApiUrl, tostring(health.pending or 0)))
     else
-        print('[utrp_store] ^1Bridge niet bereikbaar — controleer ApiUrl en ApiKey^0')
+        local err = health and health.error or 'geen antwoord'
+        print(('[utrp_store] ^1Bridge FOUT (%s) — %s^0'):format(Config.ApiUrl, err))
+        print('[utrp_store] ^1Check Config.ApiUrl en Config.ApiKey (STORE_BRIDGE_API_KEY in Vercel)^0')
     end
 end)
