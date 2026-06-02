@@ -1,6 +1,5 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "node scripts/vercel-prep.js",
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/health", "destination": "/api/router?route=health" },

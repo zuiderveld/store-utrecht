@@ -2,6 +2,10 @@
   "private": true,
   "name": "utrecht-store",
   "description": "Utrecht Roleplay — aparte coin store (website + API + FiveM bridge)",
+  "scripts": {
+    "build": "node scripts/vercel-prep.js",
+    "vercel-prep": "node scripts/vercel-prep.js"
+  },
   "dependencies": {
     "@vercel/blob": "^2.4.0"
   }
