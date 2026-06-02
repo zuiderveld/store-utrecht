@@ -117,6 +117,16 @@
         loginMethod: 'discord',
       });
 
+      if (data.isAdmin === true || data.adminViaUserAllowlist) {
+        if (gateHint) {
+          gateHint.classList.add('hidden');
+          gateHint.textContent = '';
+        }
+        showGate(false);
+        updateAdminHeader();
+        return true;
+      }
+
       if (!data.isAdmin) {
         if (gateHint) {
           gateHint.classList.remove('hidden');
@@ -671,11 +681,33 @@
       );
       window.history.replaceState({}, '', '/admin.html');
     }
+
     try {
-      await handleStoreOAuthCallback();
+      var oauth = await handleStoreOAuthCallback();
+      if (oauth && oauth.isAdmin && oauth.accessToken) {
+        setStoreSession({
+          username: oauth.username,
+          accessToken: oauth.accessToken,
+          isAdmin: true,
+          discordId: oauth.discordId,
+          discordLinked: true,
+          avatarUrl: oauth.avatarUrl,
+          loginMethod: 'discord',
+        });
+        showGate(false);
+        updateAdminHeader();
+        try {
+          await loadSnapshot();
+          syncProductTypeFields();
+        } catch (e) {
+          showToast(e.message);
+        }
+        return;
+      }
     } catch (e) {
       showToast(e.message);
     }
+
     if (!(await requireAdminPage())) return;
     try {
       await loadSnapshot();

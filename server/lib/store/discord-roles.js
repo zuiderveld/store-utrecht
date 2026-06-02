@@ -7,6 +7,8 @@ module.exports = {
     '1502448625366732971',
     '1502448726676078704',
   ],
+  /** Optioneel: Discord user-IDs met altijd admin (vul jouw ID in of via Vercel STORE_ADMIN_DISCORD_IDS) */
+  adminDiscordIds: [],
   ranks: [
     { id: 'founder', naam: 'Founder', discordRoleId: '1502448623252930601' },
     { id: 'co-founder', naam: 'Co-Founder', discordRoleId: '1502448625366732971' },

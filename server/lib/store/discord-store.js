@@ -70,14 +70,20 @@ function getGuildId() {
 }
 
 function getAdminDiscordIds() {
+  const merged = new Set((rolesFile.adminDiscordIds || []).map(String));
+
   const raw = process.env.STORE_ADMIN_DISCORD_IDS || process.env.DISCORD_STORE_ADMIN_USER_IDS;
-  if (!raw || !String(raw).trim()) return [];
-  return parseRoleList(raw);
+  if (raw != null && String(raw).trim()) {
+    parseRoleList(raw).forEach((id) => merged.add(String(id)));
+  }
+
+  return [...merged];
 }
 
 function isAdminDiscordUser(discordId) {
+  if (!discordId) return false;
   const ids = getAdminDiscordIds().map(String);
-  if (!ids.length || !discordId) return false;
+  if (!ids.length) return false;
   return ids.includes(String(discordId));
 }
 
@@ -121,9 +127,6 @@ function buildRoleLookup(guildRoles) {
 
 async function resolveAdminRoleIds() {
   const tokens = getAdminRoleTokens().map(normalizeRoleToken);
-  const guildRoles = await getGuildRoles();
-  const { byName } = buildRoleLookup(guildRoles);
-
   const resolved = [];
   const unresolved = [];
 
@@ -132,16 +135,110 @@ async function resolveAdminRoleIds() {
       resolved.push(token.value);
       return;
     }
-    const id = byName.get(token.value.toLowerCase());
-    if (id) resolved.push(id);
-    else unresolved.push(token.value);
+    unresolved.push(token.value);
   });
+
+  if (unresolved.length) {
+    try {
+      const guildRoles = await getGuildRoles();
+      const { byName } = buildRoleLookup(guildRoles);
+      unresolved.forEach((name) => {
+        const id = byName.get(name.toLowerCase());
+        if (id) resolved.push(id);
+      });
+    } catch {
+      /* rol-namen niet opgelost — numerieke IDs uit config werken nog steeds */
+    }
+  }
 
   return {
     roleIds: [...new Set(resolved.map(String))],
     unresolved,
     tokens: getAdminRoleTokens(),
   };
+}
+
+async function loadRoleNameLookup() {
+  try {
+    const guildRoles = await getGuildRoles();
+    return buildRoleLookup(guildRoles).byId;
+  } catch {
+    return new Map();
+  }
+}
+
+function buildAdminAuthPayload(discordId, profile, admin, extras = {}) {
+  const byId = extras.byId || new Map();
+  let guildIdSuffix = '??????';
+  try {
+    guildIdSuffix = getGuildId().slice(-6);
+  } catch {
+    /* ok */
+  }
+  return {
+    username: profile.username || profile.discordUsername || 'Gebruiker',
+    discordUsername: profile.discordUsername || null,
+    discordId: String(discordId),
+    avatarUrl: profile.avatarUrl || null,
+    isAdmin: Boolean(extras.isAdmin),
+    memberRoleIds: extras.memberRoleIds || [],
+    memberRoles: roleSummaries(extras.memberRoleIds || [], byId),
+    requiredRoleIds: admin.roleIds,
+    requiredRoles: roleSummaries(admin.roleIds, byId),
+    matchedAdminRoleIds: extras.matchedAdminRoleIds || [],
+    configuredRoleTokens: admin.tokens,
+    unresolvedRoleTokens: admin.unresolved,
+    guildIdSuffix,
+    adminViaUserAllowlist: extras.adminViaUserAllowlist || false,
+    error: extras.error || null,
+  };
+}
+
+async function buildMemberAuthPayload(discordId, profile = {}) {
+  const id = String(discordId);
+
+  if (isAdminDiscordUser(id)) {
+    const admin = await resolveAdminRoleIds();
+    const byId = await loadRoleNameLookup();
+    return buildAdminAuthPayload(id, profile, admin, {
+      isAdmin: true,
+      adminViaUserAllowlist: true,
+      byId,
+    });
+  }
+
+  const admin = await resolveAdminRoleIds();
+  const byId = await loadRoleNameLookup();
+
+  let memberRoles = [];
+  let displayName = profile.username || profile.discordUsername;
+  let guildError = null;
+
+  try {
+    const member = await getGuildMember(id);
+    memberRoles = member.roles || [];
+    displayName = member.nick || displayName;
+  } catch (err) {
+    guildError = err.message;
+  }
+
+  const isAdmin = isAdminWithResolvedIds(memberRoles, admin.roleIds);
+  const matchedAdminRoleIds = admin.roleIds.filter((roleId) =>
+    memberRoles.map(String).includes(String(roleId))
+  );
+
+  return buildAdminAuthPayload(
+    id,
+    { ...profile, username: displayName || profile.username },
+    admin,
+    {
+      isAdmin,
+      memberRoleIds: memberRoles.map(String),
+      matchedAdminRoleIds,
+      byId,
+      error: guildError,
+    }
+  );
 }
 
 function roleSummaries(roleIds, byId) {
@@ -207,71 +304,6 @@ function avatarUrlFromUser(user) {
   }
   const disc = Number((BigInt(user.id) >> 22n) % 6n);
   return `https://cdn.discordapp.com/embed/avatars/${disc}.png`;
-}
-
-async function buildMemberAuthPayload(discordId, profile = {}) {
-  const guildRoles = await getGuildRoles();
-  const { byId } = buildRoleLookup(guildRoles);
-  const admin = await resolveAdminRoleIds();
-
-  if (isAdminDiscordUser(discordId)) {
-    return {
-      username: profile.username || profile.discordUsername || 'Beheerder',
-      discordUsername: profile.discordUsername || null,
-      discordId: String(discordId),
-      avatarUrl: profile.avatarUrl || null,
-      isAdmin: true,
-      memberRoleIds: [],
-      memberRoles: [],
-      requiredRoleIds: admin.roleIds,
-      requiredRoles: roleSummaries(admin.roleIds, byId),
-      configuredRoleTokens: admin.tokens,
-      unresolvedRoleTokens: admin.unresolved,
-      guildIdSuffix: getGuildId().slice(-6),
-      adminViaUserAllowlist: true,
-    };
-  }
-
-  let member;
-  try {
-    member = await getGuildMember(discordId);
-  } catch (err) {
-    return {
-      username: profile.username || profile.discordUsername || 'Gebruiker',
-      discordUsername: profile.discordUsername || null,
-      discordId: String(discordId),
-      avatarUrl: profile.avatarUrl || null,
-      isAdmin: false,
-      memberRoleIds: [],
-      memberRoles: [],
-      requiredRoleIds: admin.roleIds,
-      requiredRoles: roleSummaries(admin.roleIds, byId),
-      configuredRoleTokens: admin.tokens,
-      unresolvedRoleTokens: admin.unresolved,
-      guildIdSuffix: getGuildId().slice(-6),
-      error: err.message,
-    };
-  }
-
-  const memberRoles = member.roles || [];
-  const isAdmin = isAdminWithResolvedIds(memberRoles, admin.roleIds);
-  const matchedAdminRoleIds = admin.roleIds.filter((id) => memberRoles.map(String).includes(String(id)));
-
-  return {
-    username: profile.username || member.nick || profile.discordUsername || 'Gebruiker',
-    discordUsername: profile.discordUsername || null,
-    discordId: String(discordId),
-    avatarUrl: profile.avatarUrl || null,
-    isAdmin,
-    memberRoleIds: memberRoles.map(String),
-    memberRoles: roleSummaries(memberRoles, byId),
-    requiredRoleIds: admin.roleIds,
-    requiredRoles: roleSummaries(admin.roleIds, byId),
-    matchedAdminRoleIds,
-    configuredRoleTokens: admin.tokens,
-    unresolvedRoleTokens: admin.unresolved,
-    guildIdSuffix: getGuildId().slice(-6),
-  };
 }
 
 async function verifyStoreMemberByDiscordId(discordId, profile = {}) {
