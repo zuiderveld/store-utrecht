@@ -112,6 +112,7 @@
     document.getElementById('prodLocation').value = '';
     document.getElementById('prodExternalUrl').value = '';
     document.getElementById('prodExternalLabel').value = 'Naar Discord';
+    document.getElementById('prodPriceUnit').value = '€';
     document.getElementById('prodActive').checked = true;
     document.getElementById('prodType').value = 'vehicle';
     if (snapshot.categories.length) {
@@ -189,6 +190,26 @@
     });
   }
 
+  function formatDisplayPrice(price, originalPrice, unit) {
+    unit = unit == null || unit === '' ? '€' : String(unit);
+    price = Number(price) || 0;
+    originalPrice = Number(originalPrice) || 0;
+    if (price <= 0 && originalPrice <= 0) return '';
+    var main = price > 0 ? price : originalPrice;
+    var suffix = unit === '€' ? ' €' : unit ? ' ' + unit : '';
+    var text = main + suffix;
+    if (originalPrice > 0 && price > 0 && originalPrice > price) {
+      text += ' (was ' + originalPrice + suffix.trim() + ')';
+    }
+    return text;
+  }
+
+  function formatAdminProductPrice(p) {
+    if (p.type !== 'external_link') return p.price + ' 🪙';
+    var unit = (p.meta && p.meta.priceUnit) || '€';
+    return formatDisplayPrice(p.price, p.originalPrice, unit) || 'Link';
+  }
+
   function syncProductTypeFields() {
     const type = document.getElementById('prodType').value;
     const vehicleFields = document.getElementById('prodVehicleFields');
@@ -216,12 +237,15 @@
     document.getElementById('prodModel').required = showVehicle;
     document.getElementById('prodDiscordRoleId').required = showDiscordRole;
     document.getElementById('prodExternalUrl').required = showExternal;
+    document.getElementById('prodPriceLabel').textContent = showExternal
+      ? 'Weergaveprijs (geen coins)'
+      : 'Prijs (coins)';
+    document.getElementById('prodOriginalPriceLabel').textContent = showExternal
+      ? 'Oude prijs (doorgestreept)'
+      : 'Oude prijs';
     document.getElementById('prodPrice').required = !showExternal;
-    document.getElementById('prodPrice').disabled = showExternal;
-    if (showExternal && !document.getElementById('prodPrice').value) {
-      document.getElementById('prodPrice').value = '0';
-    }
-    document.getElementById('prodOriginalPriceWrap').classList.toggle('hidden', showExternal);
+    document.getElementById('prodPrice').disabled = false;
+    document.getElementById('prodOriginalPriceWrap').classList.remove('hidden');
   }
 
   document.getElementById('prodType').addEventListener('change', syncProductTypeFields);
@@ -300,7 +324,7 @@
                 ? ' <span class="admin-status failed">geen link</span>'
                 : '') +
               '</td><td>' +
-              (p.type === 'external_link' ? 'Link' : p.price + ' 🪙') +
+              (p.type === 'external_link' ? formatAdminProductPrice(p) : p.price + ' 🪙') +
               '</td><td>' +
               esc(p.type) +
               '</td><td><div class="admin-table-actions">' +
@@ -445,6 +469,7 @@
           roleName: document.getElementById('prodDiscordRoleName').value.trim(),
           externalUrl: document.getElementById('prodExternalUrl').value.trim(),
           buttonLabel: document.getElementById('prodExternalLabel').value.trim() || 'Naar Discord',
+          priceUnit: document.getElementById('prodPriceUnit').value.trim(),
         },
       });
       showToast('Product opgeslagen');
@@ -596,6 +621,7 @@
       document.getElementById('prodDiscordRoleName').value = p.meta?.roleName || '';
       document.getElementById('prodExternalUrl').value = p.meta?.externalUrl || p.meta?.url || '';
       document.getElementById('prodExternalLabel').value = p.meta?.buttonLabel || 'Naar Discord';
+      document.getElementById('prodPriceUnit').value = p.meta?.priceUnit != null ? p.meta.priceUnit : '€';
       document.getElementById('prodGarage').value = p.meta?.garage || '';
       document.getElementById('prodTopspeed').value = p.meta?.topspeed || '';
       document.getElementById('prodTrunk').value = p.meta?.trunk || '';

@@ -155,9 +155,8 @@ module.exports = async function handler(req, res) {
               ...(row.meta || {}),
               externalUrl: url,
               buttonLabel: String(row.meta?.buttonLabel || 'Naar Discord').trim() || 'Naar Discord',
+              priceUnit: String(row.meta?.priceUnit || '€').trim(),
             };
-            row.price = 0;
-            row.originalPrice = null;
           }
           result.product = row;
           break;

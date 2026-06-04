@@ -131,8 +131,8 @@
                             <option value="other">Overig</option>
                         </select>
                     </label>
-                    <label>Prijs (coins) <input name="price" id="prodPrice" type="number" min="0" required></label>
-                    <label id="prodOriginalPriceWrap">Oude prijs <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
+                    <label id="prodPriceWrap"><span id="prodPriceLabel">Prijs (coins)</span> <input name="price" id="prodPrice" type="number" min="0" required></label>
+                    <label id="prodOriginalPriceWrap"><span id="prodOriginalPriceLabel">Oude prijs</span> <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
                     <label class="span-2">Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
                     <label class="span-2">Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
                     <div class="admin-form-section span-2" id="prodSectionVehicle">
@@ -173,10 +173,14 @@
                     <div class="admin-form-grid-prod external-link-fields span-2" id="prodExternalFields">
                     <label class="span-2">Link URL <strong class="req">*</strong>
                         <input name="externalUrl" id="prodExternalUrl" type="url" placeholder="https://discord.gg/jouw-server">
-                        <span class="admin-field-hint">Spelers zien een knop i.p.v. winkelwagen — geen coins, geen order.</span>
+                        <span class="admin-field-hint">Spelers zien een knop i.p.v. winkelwagen. Vul hierboven <strong>Weergaveprijs</strong> en optioneel <strong>Oude prijs</strong> in (geen coin-aankoop).</span>
                     </label>
                     <label class="span-2">Knoptekst
                         <input name="externalLabel" id="prodExternalLabel" placeholder="Naar Discord" value="Naar Discord">
+                    </label>
+                    <label>Prijs-eenheid
+                        <input name="priceUnit" id="prodPriceUnit" placeholder="€" value="€">
+                        <span class="admin-field-hint">Alleen weergave — bijv. <code>€</code>, <code>EUR</code> of leeg</span>
                     </label>
                     </div>
                     <label class="admin-check span-2"><input type="checkbox" id="prodActive" checked> Product actief in store</label>

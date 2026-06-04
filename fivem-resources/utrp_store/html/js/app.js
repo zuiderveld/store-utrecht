@@ -66,6 +66,36 @@
     return (p && p.meta && p.meta.buttonLabel) || 'Naar Discord';
   }
 
+  function externalPriceUnit(p) {
+    const unit = p && p.meta && p.meta.priceUnit;
+    return unit == null || unit === '' ? '€' : String(unit);
+  }
+
+  function formatExternalPriceText(p) {
+    const price = Number(p.price) || 0;
+    const orig = Number(p.originalPrice) || 0;
+    const unit = externalPriceUnit(p);
+    if (price <= 0 && orig <= 0) return '';
+    const main = price > 0 ? price : orig;
+    const suffix = unit === '€' ? ' €' : unit ? ' ' + unit : '';
+    return main + suffix;
+  }
+
+  function externalPriceHtml(p) {
+    const price = Number(p.price) || 0;
+    const orig = Number(p.originalPrice) || 0;
+    const unit = externalPriceUnit(p);
+    if (price <= 0 && orig <= 0) {
+      return '<span class="price external">Via link</span>';
+    }
+    const suffix = unit === '€' ? ' €' : unit ? ' ' + unit : '';
+    let html = '<span class="price">' + (price > 0 ? price : orig) + suffix + '</span>';
+    if (orig > 0 && price > 0 && orig > price) {
+      html += '<span class="price-old">' + orig + suffix + '</span>';
+    }
+    return html;
+  }
+
   function openExternalLink(url) {
     if (!url) {
       showToast('Geen link geconfigureerd', 'error');
@@ -161,7 +191,7 @@
     const external = isExternalLinkProduct(product);
 
     if (external) {
-      document.getElementById('detailPrice').textContent = 'Geen coins — via link';
+      document.getElementById('detailPrice').textContent = formatExternalPriceText(product) || 'Via externe link';
       document.getElementById('detailStats').innerHTML = '';
       addBtn.textContent = externalLinkLabel(product);
       addBtn.className = 'btn-external-link';
@@ -258,7 +288,9 @@
       const card = document.createElement('article');
       card.className = 'product-card' + (state.selected?.id === p.id ? ' selected' : '') + (external ? ' external-link' : '');
       const footHtml = external
-        ? '<div class="foot"><span class="price external">Via link</span><button type="button" class="add external">' +
+        ? '<div class="foot">' +
+          externalPriceHtml(p) +
+          '<button type="button" class="add external">' +
           esc(externalLinkLabel(p)) +
           '</button></div>'
         : '<div class="foot"><span class="price">' +

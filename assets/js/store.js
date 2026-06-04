@@ -20,7 +20,7 @@
   const recentList = document.getElementById('recentList');
   const productModal = document.getElementById('productModal');
   const loginModal = document.getElementById('loginModal');
-  const modalClose = document.getElementById('modalClose');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
   const loginModalClose = document.getElementById('loginModalClose');
   const heroActions = document.getElementById('heroActions');
   const btnLoginHero = document.getElementById('btnLoginHero');
@@ -98,6 +98,41 @@
 
   function externalLinkLabel(p) {
     return (p && p.meta && p.meta.buttonLabel) || 'Naar Discord';
+  }
+
+  function externalPriceUnit(p) {
+    var unit = p && p.meta && p.meta.priceUnit;
+    return unit == null || unit === '' ? '€' : String(unit);
+  }
+
+  function formatExternalPriceText(p) {
+    var price = Number(p.price) || 0;
+    var orig = Number(p.originalPrice) || 0;
+    var unit = externalPriceUnit(p);
+    if (price <= 0 && orig <= 0) return '';
+    var main = price > 0 ? price : orig;
+    var suffix = unit === '€' ? ' €' : unit ? ' ' + unit : '';
+    return main + suffix;
+  }
+
+  function externalPriceHtml(p) {
+    var price = Number(p.price) || 0;
+    var orig = Number(p.originalPrice) || 0;
+    var unit = externalPriceUnit(p);
+    if (price <= 0 && orig <= 0) {
+      return '<span class="store-price store-price-external">Via link</span>';
+    }
+    var suffix = unit === '€' ? ' €' : unit ? ' ' + unit : '';
+    var html = '<span class="store-price">' + (price > 0 ? price : orig) + suffix + '</span>';
+    if (orig > 0 && price > 0 && orig > price) {
+      html += '<span class="store-price-old">' + orig + suffix + '</span>';
+    }
+    return html;
+  }
+
+  function externalModalPriceText(p) {
+    var text = formatExternalPriceText(p);
+    return text || 'Via externe link';
   }
 
   function typeLabel(p) {
@@ -494,16 +529,44 @@
     return items;
   }
 
+  function setModalPriceDisplay(product) {
+    var priceEl = document.getElementById('modalPrice');
+    var oldEl = document.getElementById('modalPriceOld');
+    var external = isExternalLinkProduct(product);
+
+    if (external) {
+      priceEl.textContent = externalModalPriceText(product);
+      var orig = Number(product.originalPrice) || 0;
+      var price = Number(product.price) || 0;
+      var suffix = externalPriceUnit(product) === '€' ? ' €' : externalPriceUnit(product) ? ' ' + externalPriceUnit(product) : '';
+      if (orig > 0 && price > 0 && orig > price) {
+        oldEl.textContent = orig + suffix;
+        oldEl.hidden = false;
+      } else {
+        oldEl.hidden = true;
+        oldEl.textContent = '';
+      }
+    } else {
+      priceEl.textContent = product.price + ' coins';
+      if (product.originalPrice && product.originalPrice > product.price) {
+        oldEl.textContent = product.originalPrice + ' coins';
+        oldEl.hidden = false;
+      } else {
+        oldEl.hidden = true;
+        oldEl.textContent = '';
+      }
+    }
+  }
+
   function openProductModal(product) {
     document.getElementById('modalImage').innerHTML = imageBlock(product.image, product.name);
-    document.getElementById('modalType').textContent = typeLabel(product);
     document.getElementById('modalTitle').textContent = product.name;
-    document.getElementById('modalDesc').textContent = product.description || '';
+    document.getElementById('modalDesc').textContent = product.description || 'Geen beschrijving.';
+    setModalPriceDisplay(product);
     const buyBtn = document.getElementById('modalAddCart');
     const external = isExternalLinkProduct(product);
 
     if (external) {
-      document.getElementById('modalPrice').textContent = 'Geen coins — via link';
       buyBtn.textContent = externalLinkLabel(product);
       buyBtn.className = 'btn-buy btn-external';
       buyBtn.disabled = !externalLinkUrl(product);
@@ -511,8 +574,7 @@
         openExternalLink(product);
       };
     } else {
-      document.getElementById('modalPrice').textContent = product.price + ' coins';
-      buyBtn.textContent = isInCart(product.id) ? 'In winkelwagen ✓' : cartActionLabel();
+      buyBtn.textContent = isInCart(product.id) ? 'In winkelwagen ✓' : '🛒 Toevoegen';
       buyBtn.className = 'btn-buy';
       buyBtn.disabled = !canAddToCart(product.id);
       buyBtn.onclick = function () {
@@ -537,12 +599,12 @@
     grid.innerHTML = '';
 
     items.forEach(function (p) {
-      const pct = p.originalPrice ? discountPercent(p.price, p.originalPrice) : 0;
       const external = isExternalLinkProduct(p);
       const card = document.createElement('article');
-      card.className = 'store-card' + (external ? ' store-card-external' : '');
+      card.className = 'store-card store-card-clickable' + (external ? ' store-card-external' : '');
+      const pct = !external && p.originalPrice ? discountPercent(p.price, p.originalPrice) : 0;
       const priceHtml = external
-        ? '<span class="store-price store-price-external">Via link</span>'
+        ? externalPriceHtml(p)
         : '<span class="store-price">' +
           p.price +
           ' coins</span>' +
@@ -574,18 +636,25 @@
 
       if (external) {
         card.querySelector('.btn-external').disabled = !externalLinkUrl(p);
-        card.querySelector('.btn-external').onclick = function () {
+        card.querySelector('.btn-external').onclick = function (e) {
+          e.stopPropagation();
           openExternalLink(p);
         };
       } else {
         card.querySelector('.btn-buy').disabled = !canAddToCart(p.id);
-        card.querySelector('.btn-buy').onclick = function () {
+        card.querySelector('.btn-buy').onclick = function (e) {
+          e.stopPropagation();
           addToCart(p.id);
         };
       }
-      card.querySelector('.btn-view').onclick = function () {
+      card.querySelector('.btn-view').onclick = function (e) {
+        e.stopPropagation();
         openProductModal(p);
       };
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('.store-card-actions')) return;
+        openProductModal(p);
+      });
       grid.appendChild(card);
     });
   }
@@ -819,11 +888,17 @@
     renderProducts();
   });
 
-  modalClose.onclick = closeProductModal;
+  if (modalCloseBtn) modalCloseBtn.onclick = closeProductModal;
   loginModalClose.onclick = closeLoginModal;
   productModal.addEventListener('click', function (e) {
     if (e.target === productModal) closeProductModal();
   });
+  var productModalInner = productModal.querySelector('.store-product-modal');
+  if (productModalInner) {
+    productModalInner.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  }
   loginModal.addEventListener('click', function (e) {
     if (e.target === loginModal) closeLoginModal();
   });

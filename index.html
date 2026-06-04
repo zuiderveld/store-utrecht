@@ -234,15 +234,21 @@
 </div>
 
 <div class="store-modal-backdrop" id="productModal" hidden>
-    <div class="store-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <button type="button" class="store-modal-close" id="modalClose" aria-label="Sluiten">&times;</button>
+    <div class="store-modal store-product-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="store-modal-image" id="modalImage"></div>
         <div class="store-modal-body">
-            <span class="type-badge" id="modalType"></span>
             <h2 id="modalTitle"></h2>
-            <p id="modalDesc"></p>
-            <div class="store-modal-price" id="modalPrice"></div>
-            <button type="button" class="btn-buy" id="modalAddCart">In winkelwagen</button>
+            <div class="store-modal-desc" id="modalDesc"></div>
+        </div>
+        <div class="store-modal-footer">
+            <div class="store-modal-price-wrap">
+                <span class="store-modal-price" id="modalPrice"></span>
+                <span class="store-modal-price-old" id="modalPriceOld" hidden></span>
+            </div>
+            <div class="store-modal-actions">
+                <button type="button" class="btn-modal-close" id="modalCloseBtn">Sluiten</button>
+                <button type="button" class="btn-buy" id="modalAddCart">🛒 Toevoegen</button>
+            </div>
         </div>
     </div>
 </div>

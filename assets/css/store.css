@@ -698,6 +698,150 @@
     font-size: 1rem;
 }
 
+/* Product detail popup (klik op kaart) */
+.store-product-modal {
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    max-height: min(92vh, 720px);
+}
+
+.store-product-modal .store-modal-image {
+    aspect-ratio: 16 / 10;
+    max-height: 240px;
+    min-height: 160px;
+    flex-shrink: 0;
+}
+
+.store-product-modal .store-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 22px 16px;
+    min-height: 0;
+}
+
+.store-product-modal .store-modal-body h2 {
+    font-size: 1.15rem;
+    margin: 0 0 12px;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.store-modal-desc {
+    color: rgba(234, 240, 255, 0.78);
+    line-height: 1.65;
+    font-size: 0.92rem;
+    white-space: pre-wrap;
+}
+
+.store-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
+}
+
+.store-modal-price-wrap {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.store-product-modal .store-modal-price {
+    font-size: 1.65rem;
+    font-weight: 900;
+    color: #22c55e;
+    margin: 0;
+    line-height: 1;
+}
+
+.store-modal-price-old {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: line-through;
+}
+
+.store-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-modal-close {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #eef2ff;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.store-modal-actions .btn-buy,
+.store-modal-actions .btn-external {
+    width: auto;
+    padding: 10px 16px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.store-modal-actions .btn-external {
+    background: linear-gradient(135deg, #5865f2, #4752c4);
+}
+
+.store-modal-actions .btn-buy:hover:not(:disabled),
+.store-modal-actions .btn-external:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.store-modal-actions .btn-buy:disabled,
+.store-modal-actions .btn-external:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.store-card-clickable {
+    cursor: pointer;
+}
+
+@media (max-width: 520px) {
+    .store-modal-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .store-modal-actions {
+        width: 100%;
+    }
+
+    .store-modal-actions .btn-modal-close,
+    .store-modal-actions .btn-buy,
+    .store-modal-actions .btn-external {
+        flex: 1;
+        text-align: center;
+    }
+}
+
 /* =============================
    TOAST
 ============================= */
