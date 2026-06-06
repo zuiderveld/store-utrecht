@@ -311,14 +311,24 @@
     }
 
     camoPreviewPlaceholder.hidden = true;
-    camoWeaponImg.src = weaponThumbSrc(camoSelectedWeapon.weapon);
-    camoWeaponImg.alt = camoSelectedWeapon.label;
-    camoWeaponImg.hidden = false;
+    var weaponSrc = weaponThumbSrc(camoSelectedWeapon.weapon);
+    camoWeaponImg.onload = function () {
+      camoWeaponImg.hidden = false;
+      camoPreviewPlaceholder.hidden = true;
+    };
     camoWeaponImg.onerror = function () {
       camoWeaponImg.hidden = true;
       camoPreviewPlaceholder.hidden = false;
-      camoPreviewPlaceholder.querySelector('p').textContent = 'PNG ontbreekt: ' + camoSelectedWeapon.weapon;
+      var hint = camoPreviewPlaceholder.querySelector('p');
+      if (hint) {
+        hint.innerHTML =
+          'PNG ontbreekt op server<br><code>assets/images/weapons/' +
+          camoSelectedWeapon.weapon +
+          '.png</code><br><small>Upload + redeploy Vercel</small>';
+      }
     };
+    camoWeaponImg.src = weaponSrc;
+    camoWeaponImg.alt = camoSelectedWeapon.label;
 
     if (camoSkinLayer && camoSelectedCamo) {
       var cat = getCamoCatalog();
