@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { cors, json, readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
-const { saveState, getState } = require('../store/blob-store');
+const { saveState, getState, loadCatalogBackup, writeCatalogBackup } = require('../store/blob-store');
 const { findUser } = require('../store/auth-sessions');
 
 function slugify(s) {
@@ -88,6 +88,62 @@ module.exports = async function handler(req, res) {
           .map(mapUserForAdmin)
           .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
         orders: state.orders.slice(0, 50).map((o) => mapOrderForAdmin(state, o)),
+      });
+    }
+
+    if (req.method === 'GET' && action === 'catalog-backup') {
+      const backup = await loadCatalogBackup();
+      return json(res, 200, {
+        ok: true,
+        backup: backup || null,
+        counts: backup
+          ? { categories: (backup.categories || []).length, products: (backup.products || []).length }
+          : null,
+      });
+    }
+
+    if (req.method === 'POST' && action === 'catalog-backup-save') {
+      const state = await getState();
+      const backup = await writeCatalogBackup(state);
+      if (!backup) throw new Error('Catalog backup mislukt — check BLOB_READ_WRITE_TOKEN');
+      return json(res, 200, {
+        ok: true,
+        savedAt: backup.savedAt,
+        counts: { categories: backup.categories.length, products: backup.products.length },
+      });
+    }
+
+    if (req.method === 'POST' && action === 'catalog-restore') {
+      const backup = await loadCatalogBackup();
+      if (!backup || !Array.isArray(backup.categories) || !Array.isArray(backup.products)) {
+        throw new Error('Geen catalog backup gevonden in Vercel Blob (store/catalog-backup.json)');
+      }
+      await saveState((state) => {
+        state.categories = backup.categories;
+        state.products = backup.products;
+        return state;
+      });
+      return json(res, 200, {
+        ok: true,
+        restoredAt: backup.savedAt || null,
+        counts: { categories: backup.categories.length, products: backup.products.length },
+      });
+    }
+
+    if (req.method === 'POST' && action === 'catalog-import') {
+      const categories = body.categories;
+      const products = body.products;
+      if (!Array.isArray(categories) || !Array.isArray(products)) {
+        throw new Error('categories en products moeten arrays zijn');
+      }
+      await saveState((state) => {
+        state.categories = categories;
+        state.products = products;
+        return state;
+      });
+      return json(res, 200, {
+        ok: true,
+        counts: { categories: categories.length, products: products.length },
       });
     }
 

@@ -82,6 +82,7 @@
         <button type="button" data-tab="products"><span>📦</span> Producten</button>
         <button type="button" data-tab="coins"><span>🪙</span> Coins</button>
         <button type="button" data-tab="orders"><span>🧾</span> Orders</button>
+        <button type="button" data-tab="backup"><span>💾</span> Backup</button>
         <button type="button" data-tab="maintenance"><span>🛠️</span> Onderhoud</button>
     </div>
 
@@ -250,6 +251,26 @@
                     <tbody id="orderTable"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <div id="panel-backup" class="admin-panel">
+        <div class="admin-card">
+            <div class="admin-card-head"><h3>Producten &amp; categorieën backup</h3></div>
+            <p class="admin-hint" style="margin-bottom:1rem">
+                Sla je catalogus op als backup. Bij elke wijziging (product/categorie opslaan) wordt automatisch
+                ook een cloud-backup bijgewerkt in Vercel Blob (<code>store/catalog-backup.json</code>).
+                Spelers/coins/orders blijven bij herstellen gewoon staan.
+            </p>
+            <p class="admin-hint" id="backupStatus" style="margin-bottom:1rem">Backup status laden…</p>
+            <div class="admin-form-actions" style="flex-wrap:wrap;gap:0.5rem">
+                <button type="button" class="btn-main" id="btnBackupDownload">⬇ JSON downloaden</button>
+                <button type="button" class="btn-outline" id="btnBackupCloudSave">☁ Backup opslaan (cloud)</button>
+                <button type="button" class="btn-outline" id="btnBackupCloudRestore">↩ Herstel uit cloud</button>
+            </div>
+            <label class="admin-hint" style="display:block;margin-top:1.25rem;margin-bottom:0.5rem">Of upload een backup-bestand (.json)</label>
+            <input type="file" id="backupFileInput" accept="application/json,.json" style="margin-bottom:0.75rem">
+            <button type="button" class="btn-outline" id="btnBackupFileRestore">↩ Herstel uit bestand</button>
         </div>
     </div>
 
