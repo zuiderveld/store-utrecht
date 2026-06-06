@@ -168,48 +168,65 @@
         </div>
     </div>
 
-    <div class="store-layout">
+    <div class="store-layout" id="storeLayout">
         <main class="store-main">
             <div class="store-camo-panel hidden" id="camoPanel" aria-hidden="true">
-                <header class="store-camo-head">
-                    <div>
-                        <span class="store-camo-eyebrow">Camo editor</span>
-                        <h2>Kies wapen &amp; camo</h2>
-                        <p>Koop een skin met coins — in-game krijg je een unlock-item voor je wapen.</p>
-                    </div>
-                </header>
-                <div class="store-camo-layout">
-                    <aside class="store-camo-weapons">
-                        <h3>Wapens</h3>
-                        <div class="store-camo-weapon-groups" id="camoWeaponGroups"></div>
-                    </aside>
-                    <div class="store-camo-preview-wrap">
-                        <div class="store-camo-preview" id="camoPreviewBox">
-                            <img id="camoPreviewImg" class="store-camo-preview-img" alt="" hidden>
-                            <div class="store-camo-preview-placeholder" id="camoPreviewPlaceholder">
-                                <span>🎯</span>
-                                <p>Selecteer een camo</p>
+                <div class="store-camo-editor">
+                    <header class="store-camo-editor-top">
+                        <div class="store-camo-editor-brand">
+                            <h2 class="store-camo-editor-title">CAMO EDITOR</h2>
+                            <p class="store-camo-editor-welcome">
+                                Welkom, <strong id="camoUserName">Gast</strong> — kies wapen &amp; camo
+                            </p>
+                        </div>
+                        <div class="store-camo-editor-balance">
+                            <span id="camoCoinBalance">0</span>
+                            <span class="store-camo-coin-icon">🪙</span>
+                        </div>
+                    </header>
+
+                    <div class="store-camo-layout">
+                        <aside class="store-camo-weapons">
+                            <div class="store-camo-weapons-head">
+                                <h3>Wapens</h3>
+                                <input type="search" class="store-camo-search" id="camoWeaponSearch" placeholder="Zoek wapen…" autocomplete="off">
                             </div>
-                            <div class="store-camo-preview-active" id="camoPreviewActive" hidden>
-                                <img id="camoPreviewActiveImg" alt="">
-                                <span id="camoPreviewActiveName"></span>
+                            <div class="store-camo-weapon-groups" id="camoWeaponGroups"></div>
+                        </aside>
+
+                        <div class="store-camo-stage">
+                            <div class="store-camo-scene" id="camoPreviewBox">
+                                <div class="store-camo-scene-grid" aria-hidden="true"></div>
+                                <div class="store-camo-scene-inner" id="camoSceneInner">
+                                    <img id="camoWeaponImg" class="store-camo-weapon-layer" alt="" hidden>
+                                    <div id="camoSkinLayer" class="store-camo-skin-layer" hidden></div>
+                                </div>
+                                <div class="store-camo-preview-placeholder" id="camoPreviewPlaceholder">
+                                    <span>🔫</span>
+                                    <p>Kies een wapen links</p>
+                                </div>
+                                <div class="store-camo-preview-active" id="camoPreviewActive" hidden>
+                                    <img id="camoPreviewActiveImg" alt="">
+                                    <span id="camoPreviewActiveName"></span>
+                                </div>
+                            </div>
+                            <p class="store-camo-preview-weapon" id="camoPreviewWeapon">—</p>
+                            <p class="store-camo-preview-hint">Sleep om te draaien · scroll om te zoomen</p>
+                            <div class="store-camo-buybar">
+                                <div class="store-camo-buybar-price">
+                                    <span>Geselecteerd</span>
+                                    <strong id="camoSelectedName">Geen camo</strong>
+                                    <em id="camoSelectedPrice"></em>
+                                </div>
+                                <button type="button" class="btn-buy store-camo-buy-btn" id="camoAddCart" disabled>🛒 Toevoegen</button>
                             </div>
                         </div>
-                        <p class="store-camo-preview-weapon" id="camoPreviewWeapon">—</p>
-                        <p class="store-camo-preview-hint">Sleep preview om te draaien · scroll om te zoomen</p>
-                        <div class="store-camo-buybar">
-                            <div class="store-camo-buybar-price">
-                                <span>Geselecteerd</span>
-                                <strong id="camoSelectedName">Geen camo</strong>
-                                <em id="camoSelectedPrice"></em>
-                            </div>
-                            <button type="button" class="btn-buy store-camo-buy-btn" id="camoAddCart" disabled>🛒 Toevoegen</button>
-                        </div>
+
+                        <aside class="store-camo-skins">
+                            <h3>Camo&apos;s</h3>
+                            <div class="store-camo-grid" id="camoGrid"></div>
+                        </aside>
                     </div>
-                    <aside class="store-camo-skins">
-                        <h3>Camo&apos;s</h3>
-                        <div class="store-camo-grid" id="camoGrid"></div>
-                    </aside>
                 </div>
             </div>
             <div class="store-grid" id="productGrid"></div>
@@ -335,6 +352,7 @@
 </footer>
 
 <script src="js/store-config.js"></script>
+<script src="assets/js/camo-catalog.js"></script>
 <script src="assets/js/store-auth.js"></script>
 <script src="assets/js/store.js"></script>
 </body>

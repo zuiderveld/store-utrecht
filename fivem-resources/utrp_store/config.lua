@@ -14,6 +14,7 @@ Config.FastSyncSeconds = 3
 
 -- Items (ox_inventory): meta.item + meta.count op product in admin
 Config.UseOxInventory = true
+Config.CamoUnlockItem = 'weapon_camo'
 Config.StoredInGarage = 1
 
 -- Garage: cloud-garage (garageid) | parking (ESX parking string) | minimal (alleen stored)

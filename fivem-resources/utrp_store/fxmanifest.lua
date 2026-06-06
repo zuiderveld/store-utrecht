@@ -25,6 +25,7 @@ server_scripts {
 
 client_scripts {
     'client/main.lua',
+    'client/camo.lua',
 }
 
 ui_page 'html/index.html'

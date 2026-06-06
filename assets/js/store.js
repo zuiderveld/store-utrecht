@@ -51,10 +51,13 @@
   const cartTotal = document.getElementById('cartTotal');
   const cartCheckout = document.getElementById('cartCheckout');
   const camoPanel = document.getElementById('camoPanel');
+  const storeLayout = document.getElementById('storeLayout');
   const camoWeaponGroups = document.getElementById('camoWeaponGroups');
   const camoGrid = document.getElementById('camoGrid');
   const camoPreviewBox = document.getElementById('camoPreviewBox');
-  const camoPreviewImg = document.getElementById('camoPreviewImg');
+  const camoSceneInner = document.getElementById('camoSceneInner');
+  const camoWeaponImg = document.getElementById('camoWeaponImg');
+  const camoSkinLayer = document.getElementById('camoSkinLayer');
   const camoPreviewPlaceholder = document.getElementById('camoPreviewPlaceholder');
   const camoPreviewActive = document.getElementById('camoPreviewActive');
   const camoPreviewActiveImg = document.getElementById('camoPreviewActiveImg');
@@ -63,15 +66,20 @@
   const camoSelectedName = document.getElementById('camoSelectedName');
   const camoSelectedPrice = document.getElementById('camoSelectedPrice');
   const camoAddCart = document.getElementById('camoAddCart');
+  const camoWeaponSearch = document.getElementById('camoWeaponSearch');
+  const camoUserName = document.getElementById('camoUserName');
+  const camoCoinBalance = document.getElementById('camoCoinBalance');
 
   let catalog = { categories: [], products: [], me: null, recentPurchases: [], topBuyer: null };
   let activeCat = 'all';
   let searchQuery = '';
   let cart = [];
   let camoSelectedWeapon = null;
-  let camoSelectedProduct = null;
+  let camoSelectedCamo = null;
+  let camoWeaponFilter = '';
   let camoPreviewRotation = 0;
   let camoPreviewScale = 1;
+  let camoPreviewTilt = -8;
   const CART_KEY = 'urpStoreCart';
 
   function loadCart() {
@@ -170,6 +178,10 @@
     });
   }
 
+  function getCamoCatalog() {
+    return window.URP_CAMO_CATALOG || { weapons: [], camos: [], groupOrder: [] };
+  }
+
   function getCamoProducts() {
     return catalog.products.filter(function (p) {
       if (p.active === false) return false;
@@ -178,112 +190,211 @@
     });
   }
 
-  function buildCamoWeaponGroups(products) {
-    var groups = {};
-    products.forEach(function (p) {
+  function findCamoProduct(weapon, camoId) {
+    var w = String(weapon || '').toUpperCase();
+    var c = String(camoId || '').toLowerCase();
+    return getCamoProducts().find(function (p) {
       var meta = p.meta || {};
-      var weapon = String(meta.weapon || '').toUpperCase();
-      if (!weapon) return;
-      var group = String(meta.weaponGroup || 'OVERIG').toUpperCase();
-      if (!groups[group]) groups[group] = {};
-      if (!groups[group][weapon]) {
-        groups[group][weapon] = {
-          weapon: weapon,
-          label: meta.weaponLabel || weapon.replace(/^WEAPON_/, '').replace(/_/g, ' '),
-        };
-      }
+      return String(meta.weapon || '').toUpperCase() === w && String(meta.camoId || '').toLowerCase() === c;
     });
-    return groups;
+  }
+
+  function getCatalogWeapons() {
+    var cat = getCamoCatalog();
+    var list = cat.weapons || [];
+    var q = camoWeaponFilter.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(function (w) {
+      return (
+        w.label.toLowerCase().includes(q) ||
+        w.weapon.toLowerCase().includes(q) ||
+        w.group.toLowerCase().includes(q)
+      );
+    });
+  }
+
+  function weaponThumbSrc(weapon) {
+    var cat = getCamoCatalog();
+    if (cat.weaponImage) return cat.weaponImage(weapon);
+    return (cat.weaponImageBase || 'assets/images/weapons/') + weapon + '.png';
+  }
+
+  function camoThumbStyle(camo) {
+    if (camo.css) return 'background:' + camo.css;
+    return '';
+  }
+
+  function camoThumbHtml(camo) {
+    var cat = getCamoCatalog();
+    var img = cat.camoImage ? cat.camoImage(camo.camoId) : (cat.camoImageBase || '') + camo.camoId + '.png';
+    return (
+      '<span class="store-camo-tile-thumb">' +
+      '<span class="store-camo-tile-thumb-inner" style="' +
+      esc(camoThumbStyle(camo)) +
+      '"><img src="' +
+      esc(img) +
+      '" alt="" onerror="this.style.display=\'none\'"></span></span>'
+    );
+  }
+
+  function updateCamoEditorHeader() {
+    if (camoUserName) {
+      camoUserName.textContent =
+        catalog.me?.globalName || catalog.me?.username || catalog.me?.displayName || 'Gast';
+    }
+    if (camoCoinBalance) {
+      camoCoinBalance.textContent = String(catalog.me?.coins ?? 0);
+    }
   }
 
   function updateCamoBuyBar() {
     if (!camoAddCart) return;
-    if (!camoSelectedProduct) {
+    var product = camoSelectedWeapon && camoSelectedCamo
+      ? findCamoProduct(camoSelectedWeapon.weapon, camoSelectedCamo.camoId)
+      : null;
+
+    if (!camoSelectedCamo || !camoSelectedWeapon) {
       if (camoSelectedName) camoSelectedName.textContent = 'Geen camo';
       if (camoSelectedPrice) camoSelectedPrice.textContent = '';
       camoAddCart.disabled = true;
       camoAddCart.textContent = '🛒 Toevoegen';
       return;
     }
-    if (camoSelectedName) camoSelectedName.textContent = camoSelectedProduct.name;
-    if (camoSelectedPrice) camoSelectedPrice.textContent = camoSelectedProduct.price + ' coins';
-    var inCart = isInCart(camoSelectedProduct.id);
-    camoAddCart.disabled = inCart || !canAddToCart(camoSelectedProduct.id);
+
+    var label = camoSelectedCamo.name + ' — ' + camoSelectedWeapon.label;
+    if (camoSelectedName) camoSelectedName.textContent = label;
+
+    if (!product) {
+      if (camoSelectedPrice) {
+        camoSelectedPrice.textContent = 'Nog niet in store (' + camoSelectedCamo.price + ' coins voorstel)';
+      }
+      camoAddCart.disabled = true;
+      camoAddCart.textContent = 'Nog niet te koop';
+      return;
+    }
+
+    if (camoSelectedPrice) camoSelectedPrice.textContent = product.price + ' coins';
+    var inCart = isInCart(product.id);
+    camoAddCart.disabled = inCart || !canAddToCart(product.id);
     camoAddCart.textContent = inCart ? 'In winkelwagen ✓' : '🛒 Toevoegen';
   }
 
+  function applyCamoSceneTransform() {
+    if (!camoSceneInner) return;
+    camoSceneInner.style.transform =
+      'rotateX(' +
+      camoPreviewTilt +
+      'deg) rotateY(' +
+      camoPreviewRotation +
+      'deg) scale(' +
+      camoPreviewScale +
+      ')';
+  }
+
   function updateCamoPreview() {
-    if (!camoPreviewImg || !camoPreviewPlaceholder) return;
-    var weaponLabel = camoSelectedWeapon
-      ? (camoSelectedWeapon.label || camoSelectedWeapon.weapon)
-      : '—';
-    if (camoPreviewWeapon) camoPreviewWeapon.textContent = weaponLabel;
+    if (!camoWeaponImg || !camoPreviewPlaceholder) return;
+    applyCamoSceneTransform();
 
-    var img = camoSelectedProduct && camoSelectedProduct.image;
-    if (img) {
-      camoPreviewImg.src = img;
-      camoPreviewImg.alt = camoSelectedProduct.name;
-      camoPreviewImg.hidden = false;
-      camoPreviewPlaceholder.hidden = true;
-      camoPreviewImg.style.transform =
-        'rotateY(' + camoPreviewRotation + 'deg) scale(' + camoPreviewScale + ')';
-    } else {
-      camoPreviewImg.hidden = true;
+    if (camoPreviewWeapon) {
+      camoPreviewWeapon.textContent = camoSelectedWeapon
+        ? camoSelectedWeapon.label
+        : '—';
+    }
+
+    if (!camoSelectedWeapon) {
+      camoWeaponImg.hidden = true;
+      if (camoSkinLayer) camoSkinLayer.hidden = true;
       camoPreviewPlaceholder.hidden = false;
+      if (camoPreviewActive) camoPreviewActive.hidden = true;
+      updateCamoBuyBar();
+      return;
     }
 
-    if (camoPreviewActive && camoPreviewActiveImg && camoPreviewActiveName) {
-      if (camoSelectedProduct && camoSelectedProduct.image) {
-        camoPreviewActiveImg.src = camoSelectedProduct.image;
-        camoPreviewActiveName.textContent = camoSelectedProduct.name;
-        camoPreviewActive.hidden = false;
-      } else {
-        camoPreviewActive.hidden = true;
-      }
+    camoPreviewPlaceholder.hidden = true;
+    camoWeaponImg.src = weaponThumbSrc(camoSelectedWeapon.weapon);
+    camoWeaponImg.alt = camoSelectedWeapon.label;
+    camoWeaponImg.hidden = false;
+    camoWeaponImg.onerror = function () {
+      camoWeaponImg.hidden = true;
+      camoPreviewPlaceholder.hidden = false;
+      camoPreviewPlaceholder.querySelector('p').textContent = 'PNG ontbreekt: ' + camoSelectedWeapon.weapon;
+    };
+
+    if (camoSkinLayer && camoSelectedCamo) {
+      var cat = getCamoCatalog();
+      var camoImg = cat.camoImage ? cat.camoImage(camoSelectedCamo.camoId) : '';
+      camoSkinLayer.hidden = false;
+      camoSkinLayer.style.background = camoSelectedCamo.css || 'transparent';
+      camoSkinLayer.style.backgroundImage = camoImg ? 'url("' + camoImg + '"), ' + (camoSelectedCamo.css || 'none') : (camoSelectedCamo.css || 'none');
+    } else if (camoSkinLayer) {
+      camoSkinLayer.hidden = true;
     }
+
+    if (camoPreviewActive && camoPreviewActiveImg && camoPreviewActiveName && camoSelectedCamo) {
+      camoPreviewActiveImg.src = (getCamoCatalog().camoImage && getCamoCatalog().camoImage(camoSelectedCamo.camoId)) || '';
+      camoPreviewActiveImg.onerror = function () {
+        camoPreviewActiveImg.style.background = camoSelectedCamo.css || '#333';
+      };
+      camoPreviewActiveName.textContent = camoSelectedCamo.name;
+      camoPreviewActive.hidden = false;
+    } else if (camoPreviewActive) {
+      camoPreviewActive.hidden = true;
+    }
+
     updateCamoBuyBar();
   }
 
   function selectCamoWeapon(entry) {
     camoSelectedWeapon = entry;
-    camoSelectedProduct = null;
-    camoPreviewRotation = 0;
-    camoPreviewScale = 1;
-    renderCamoPanel();
-  }
-
-  function selectCamoProduct(product) {
-    camoSelectedProduct = product;
+    if (!camoSelectedCamo) {
+      var camos = getCamoCatalog().camos || [];
+      if (camos.length) camoSelectedCamo = camos[0];
+    }
+    renderCamoWeaponList();
+    renderCamoGrid();
     updateCamoPreview();
-    if (!camoGrid) return;
-    camoGrid.querySelectorAll('.store-camo-tile').forEach(function (el) {
-      el.classList.toggle('active', el.dataset.productId === product.id);
-    });
   }
 
-  function renderCamoPanel() {
-    if (!camoPanel || !camoWeaponGroups || !camoGrid) return;
-    var products = getCamoProducts();
-    var groups = buildCamoWeaponGroups(products);
-    var groupNames = Object.keys(groups).sort();
+  function selectCamoSkin(camo) {
+    camoSelectedCamo = camo;
+    renderCamoGrid();
+    updateCamoPreview();
+  }
 
-    if (!camoSelectedWeapon && groupNames.length) {
-      var firstGroup = groupNames[0];
-      var firstWeapon = Object.values(groups[firstGroup])[0];
-      if (firstWeapon) camoSelectedWeapon = firstWeapon;
+  function renderCamoWeaponList() {
+    if (!camoWeaponGroups) return;
+    var cat = getCamoCatalog();
+    var weapons = getCatalogWeapons();
+    var groupOrder = cat.groupOrder || [];
+    var grouped = {};
+
+    weapons.forEach(function (w) {
+      if (!grouped[w.group]) grouped[w.group] = [];
+      grouped[w.group].push(w);
+    });
+
+    var groupNames = groupOrder.filter(function (g) {
+      return grouped[g] && grouped[g].length;
+    });
+    Object.keys(grouped).forEach(function (g) {
+      if (groupNames.indexOf(g) === -1) groupNames.push(g);
+    });
+
+    if (!camoSelectedWeapon && weapons.length) {
+      camoSelectedWeapon = weapons[0];
     }
 
-    camoWeaponGroups.innerHTML = groupNames.length
+    camoWeaponGroups.innerHTML = weapons.length
       ? groupNames
           .map(function (groupName) {
-            var weapons = Object.values(groups[groupName]).sort(function (a, b) {
+            var list = grouped[groupName].sort(function (a, b) {
               return a.label.localeCompare(b.label, 'nl');
             });
             return (
               '<div class="store-camo-group"><div class="store-camo-group-label">' +
               esc(groupName) +
               '</div><div class="store-camo-weapon-list">' +
-              weapons
+              list
                 .map(function (w) {
                   var active =
                     camoSelectedWeapon && camoSelectedWeapon.weapon === w.weapon ? ' active' : '';
@@ -292,7 +403,9 @@
                     active +
                     '" data-weapon="' +
                     esc(w.weapon) +
-                    '"><span class="store-camo-weapon-icon">🔫</span><span>' +
+                    '"><span class="store-camo-weapon-thumb"><img src="' +
+                    esc(weaponThumbSrc(w.weapon)) +
+                    '" alt="" loading="lazy" onerror="this.parentElement.classList.add(\'fallback\')"></span><span class="store-camo-weapon-label">' +
                     esc(w.label) +
                     '</span></button>'
                   );
@@ -302,65 +415,64 @@
             );
           })
           .join('')
-      : '<p class="store-camo-empty">Geen wapens — voeg camo producten toe in admin.</p>';
+      : '<p class="store-camo-empty">Geen wapens gevonden.</p>';
 
     camoWeaponGroups.querySelectorAll('.store-camo-weapon-btn').forEach(function (btn) {
       btn.onclick = function () {
         var weapon = btn.dataset.weapon;
-        groupNames.forEach(function (g) {
-          Object.values(groups[g]).forEach(function (w) {
-            if (w.weapon === weapon) selectCamoWeapon(w);
-          });
+        var found = (cat.weapons || []).find(function (w) {
+          return w.weapon === weapon;
         });
+        if (found) selectCamoWeapon(found);
       };
     });
+  }
 
-    var filtered = camoSelectedWeapon
-      ? products.filter(function (p) {
-          return String((p.meta && p.meta.weapon) || '').toUpperCase() === camoSelectedWeapon.weapon;
-        })
-      : products;
+  function renderCamoGrid() {
+    if (!camoGrid) return;
+    var camos = getCamoCatalog().camos || [];
 
-    camoGrid.innerHTML = filtered.length
-      ? filtered
-          .map(function (p) {
-            var active = camoSelectedProduct && camoSelectedProduct.id === p.id ? ' active' : '';
-            var thumb = p.image
-              ? '<img src="' + esc(p.image) + '" alt="">'
-              : '<span class="store-camo-tile-fallback">' + esc(p.name.charAt(0)) + '</span>';
+    if (!camoSelectedCamo && camos.length) camoSelectedCamo = camos[0];
+
+    camoGrid.innerHTML = camos.length
+      ? camos
+          .map(function (c) {
+            var active = camoSelectedCamo && camoSelectedCamo.camoId === c.camoId ? ' active' : '';
+            var product = camoSelectedWeapon ? findCamoProduct(camoSelectedWeapon.weapon, c.camoId) : null;
+            var price = product ? product.price + ' 🪙' : c.price + ' 🪙';
             return (
               '<button type="button" class="store-camo-tile' +
               active +
-              '" data-product-id="' +
-              esc(p.id) +
-              '"><span class="store-camo-tile-thumb">' +
-              thumb +
-              '</span><span class="store-camo-tile-name">' +
-              esc(p.name) +
+              '" data-camo-id="' +
+              esc(c.camoId) +
+              '">' +
+              camoThumbHtml(c) +
+              '<span class="store-camo-tile-name">' +
+              esc(c.name) +
               '</span><span class="store-camo-tile-price">' +
-              p.price +
-              ' 🪙</span></button>'
+              price +
+              '</span></button>'
             );
           })
           .join('')
-      : '<p class="store-camo-empty">Geen camo\'s voor dit wapen.</p>';
+      : '<p class="store-camo-empty">Geen camo\'s geconfigureerd.</p>';
 
     camoGrid.querySelectorAll('.store-camo-tile').forEach(function (tile) {
       tile.onclick = function () {
-        var product = getProductById(tile.dataset.productId);
-        if (product) selectCamoProduct(product);
+        var id = tile.dataset.camoId;
+        var camo = camos.find(function (c) {
+          return c.camoId === id;
+        });
+        if (camo) selectCamoSkin(camo);
       };
     });
+  }
 
-    if (camoSelectedProduct) {
-      var stillValid = filtered.some(function (p) {
-        return p.id === camoSelectedProduct.id;
-      });
-      if (!stillValid) camoSelectedProduct = filtered[0] || null;
-    } else if (filtered.length) {
-      camoSelectedProduct = filtered[0];
-    }
-
+  function renderCamoPanel() {
+    if (!camoPanel) return;
+    updateCamoEditorHeader();
+    renderCamoWeaponList();
+    renderCamoGrid();
     updateCamoPreview();
   }
 
@@ -381,24 +493,33 @@
     });
     window.addEventListener('mousemove', function (e) {
       if (!dragging) return;
-      camoPreviewRotation += (e.clientX - lastX) * 0.6;
+      camoPreviewRotation += (e.clientX - lastX) * 0.5;
       lastX = e.clientX;
-      updateCamoPreview();
+      applyCamoSceneTransform();
     });
     camoPreviewBox.addEventListener(
       'wheel',
       function (e) {
         e.preventDefault();
-        camoPreviewScale = Math.min(1.6, Math.max(0.7, camoPreviewScale + (e.deltaY < 0 ? 0.05 : -0.05)));
-        updateCamoPreview();
+        camoPreviewScale = Math.min(1.8, Math.max(0.55, camoPreviewScale + (e.deltaY < 0 ? 0.06 : -0.06)));
+        applyCamoSceneTransform();
       },
       { passive: false }
     );
 
+    if (camoWeaponSearch) {
+      camoWeaponSearch.addEventListener('input', function () {
+        camoWeaponFilter = camoWeaponSearch.value || '';
+        renderCamoWeaponList();
+      });
+    }
+
     if (camoAddCart) {
       camoAddCart.onclick = function () {
-        if (!camoSelectedProduct) return;
-        addToCart(camoSelectedProduct.id);
+        if (!camoSelectedWeapon || !camoSelectedCamo) return;
+        var product = findCamoProduct(camoSelectedWeapon.weapon, camoSelectedCamo.camoId);
+        if (!product) return showToast('Dit camo is nog niet als product in de store gezet.');
+        addToCart(product.id);
         updateCamoBuyBar();
       };
     }
@@ -712,6 +833,7 @@
       closeSessionMenu();
       stopLiveRefresh();
     }
+    updateCamoEditorHeader();
   }
 
   function renderWidgets() {
@@ -867,17 +989,15 @@
     }
     if (grid) grid.style.display = camoMode ? 'none' : '';
 
+    if (storeLayout) storeLayout.classList.toggle('store-layout-camo', camoMode);
+
     if (camoMode) {
       initCamoPreviewControls();
       renderCamoPanel();
-      const count = getCamoProducts().length;
-      productCount.textContent = count + ' camo\u2019s';
-      if (emptyMsg) {
-        emptyMsg.style.display = count ? 'none' : 'block';
-        emptyMsg.textContent = count
-          ? ''
-          : 'Geen camo producten — maak categorie Camo en voeg producten toe (type wapen camo).';
-      }
+      var wCount = (getCamoCatalog().weapons || []).length;
+      var cCount = (getCamoCatalog().camos || []).length;
+      productCount.textContent = wCount + ' wapens · ' + cCount + ' camo\u2019s';
+      if (emptyMsg) emptyMsg.style.display = 'none';
       return;
     }
 

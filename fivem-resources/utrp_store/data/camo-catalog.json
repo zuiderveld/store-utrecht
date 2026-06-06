@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "category": {
+    "id": "camo",
+    "name": "Camo",
+    "slug": "camo",
+    "sort": 5
+  },
+  "oxItemUnlock": "weapon_camo",
+  "weapons": [
+    { "weapon": "WEAPON_PISTOL_MK2", "label": "Phantom 17", "group": "PISTOLEN", "note": "Pas hash aan als jullie custom Phantom hebben (bijv. WEAPON_PHANTOM17)" },
+    { "weapon": "WEAPON_M1911", "label": "M1911", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_MEOS45", "label": "MEOS-45", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_DE", "label": "Viper Magnum", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_TP9SF", "label": "PX9 NL", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_FNX45", "label": "Ventura", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_GLOCK45", "label": "Blackline 9", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_G17B", "label": "Phantom 17T", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_SMITHWESSON", "label": "Sentinel", "group": "PISTOLEN" },
+    { "weapon": "WEAPON_MP9", "label": "MX5", "group": "SMGS" },
+    { "weapon": "WEAPON_UMP45", "label": "UP45", "group": "SMGS" },
+    { "weapon": "WEAPON_MAC11", "label": "MC-11", "group": "SMGS" }
+  ],
+  "camos": [
+    { "camoId": "woodland", "name": "Woodland", "tint": 5, "price": 350, "image": "https://i.imgur.com/placeholder-woodland.jpg" },
+    { "camoId": "galaxy", "name": "Galaxy", "tint": 6, "price": 450, "image": "https://i.imgur.com/placeholder-galaxy.jpg" },
+    { "camoId": "neon_blue", "name": "Neon Blue", "tint": 6, "price": 400, "image": "https://i.imgur.com/placeholder-neon-blue.jpg" },
+    { "camoId": "crimson_fade", "name": "Crimson Fade", "tint": 1, "price": 400, "image": "https://i.imgur.com/placeholder-crimson.jpg" },
+    { "camoId": "dragon_scale", "name": "Dragon Scale", "tint": 2, "price": 450, "image": "https://i.imgur.com/placeholder-dragon.jpg" },
+    { "camoId": "sakura", "name": "Sakura", "tint": 3, "price": 450, "image": "https://i.imgur.com/placeholder-sakura.jpg" },
+    { "camoId": "toxic_green", "name": "Toxic Green", "tint": 5, "price": 400, "image": "https://i.imgur.com/placeholder-toxic.jpg" },
+    { "camoId": "gold_rush", "name": "Gold Rush", "tint": 2, "price": 500, "image": "https://i.imgur.com/placeholder-gold.jpg" },
+    { "camoId": "flames", "name": "Flames", "tint": 1, "price": 450, "image": "https://i.imgur.com/placeholder-flames.jpg" },
+    { "camoId": "akatsuki", "name": "Akatsuki", "tint": 1, "price": 450, "image": "https://i.imgur.com/placeholder-akatsuki.jpg" },
+    { "camoId": "blue_mirror", "name": "Blue Mirror", "tint": 6, "price": 400, "image": "https://i.imgur.com/placeholder-blue-mirror.jpg" },
+    { "camoId": "red_nova", "name": "Red Nova", "tint": 1, "price": 400, "image": "https://i.imgur.com/placeholder-red-nova.jpg" },
+    { "camoId": "ice", "name": "Ice", "tint": 3, "price": 400, "image": "https://i.imgur.com/placeholder-ice.jpg" },
+    { "camoId": "purple_haze", "name": "Purple Haze", "tint": 7, "price": 450, "image": "https://i.imgur.com/placeholder-purple.jpg" }
+  ],
+  "productIdPrefix": "camo",
+  "notes": [
+    "Vervang image URLs door jullie eigen texture previews (Imgur, Discord CDN, Vercel Blob).",
+    "Controleer weapon hashes in ox_inventory/data/weapons.lua — pas labels/hashes aan waar nodig.",
+    "Elke combinatie wapen + camo = 1 store product (type weapon_camo).",
+    "Totaal producten = weapons.length × camos.length (12 × 14 = 168) als elke camo op elk wapen."
+  ]
+}

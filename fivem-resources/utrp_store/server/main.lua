@@ -322,6 +322,57 @@ local function giveStoreItem(order)
     return false, err or 'add_failed'
 end
 
+local function giveWeaponCamo(order)
+    local meta = order.meta or {}
+    local src = getSourceByLicense(order.license)
+    if not src then
+        return false, 'player_offline'
+    end
+
+    if Config.UseOxInventory == false then
+        return false, 'ox_disabled'
+    end
+
+    if GetResourceState('ox_inventory') ~= 'started' then
+        print('[utrp_store] ox_inventory niet gestart — kan camo niet geven')
+        return false, 'ox_missing'
+    end
+
+    local itemName = normalizeOxItemName(meta.oxItem or meta.item or Config.CamoUnlockItem or 'weapon_camo')
+    if not itemName then
+        return false, 'no_camo_item'
+    end
+
+    if not oxItemExists(itemName) then
+        print(('[utrp_store] Camo item "%s" ontbreekt in ox_inventory — zie CAMO-STORE-URP.md'):format(itemName))
+        return false, 'unknown_item:' .. itemName
+    end
+
+    local itemMeta = {
+        camoId = meta.camoId,
+        weapon = meta.weapon,
+        tint = tonumber(meta.tint) or 0,
+        label = order.productName,
+        description = ('Camo %s voor %s'):format(meta.camoId or '?', meta.weapon or '?'),
+    }
+
+    local canCarry = exports.ox_inventory:CanCarryItem(src, itemName, 1, itemMeta)
+    if not canCarry then
+        notifyPlayer(src, 'Inventory vol — maak ruimte voor je camo unlock.', 'error')
+        return false, 'inventory_full'
+    end
+
+    local added, err = exports.ox_inventory:AddItem(src, itemName, 1, itemMeta)
+    if added then
+        TriggerClientEvent('utrp_store:camoUnlocked', src, itemMeta)
+        notifyPlayer(src, ('Camo "%s" ontvangen — gebruik het item of je camo-menu in-game.'):format(order.productName or meta.camoId))
+        return true, ('camo:' .. tostring(meta.camoId))
+    end
+
+    print(('[utrp_store] Camo AddItem mislukt (%s) item=%s speler=%s'):format(tostring(err), itemName, order.license))
+    return false, err or 'add_failed'
+end
+
 RegisterCommand('koppelstore', function(source, args)
     if source == 0 then return end
     local raw = table.concat(args, ' ')
@@ -449,6 +500,20 @@ local function processOrders()
                 done = false
                 note = 'db_error'
                 print(('[utrp_store] Garage insert mislukt order %s — %s'):format(order.id, tostring(result)))
+            end
+        elseif order.productType == 'weapon_camo' then
+            local ok, resultNote = giveWeaponCamo(order)
+            if ok then
+                done = true
+                note = resultNote
+                print(('[utrp_store] Camo %s -> %s'):format(order.productName or '?', order.license))
+            elseif resultNote == 'player_offline' then
+                done = false
+                note = 'waiting_online'
+            else
+                done = false
+                note = resultNote
+                print(('[utrp_store] Camo mislukt (%s) order %s'):format(resultNote, order.id))
             end
         elseif order.productType == 'item' or (order.meta and (order.meta.item or order.meta.oxItem)) then
             local ok, resultNote = giveStoreItem(order)
