@@ -4,6 +4,7 @@ const { cors, json } = require('../store/http');
 const { readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
 const { blobAccess } = require('../store/blob-store');
+const { logStoreMaintenance } = require('../store/discord-webhooks');
 const { get, put } = require('@vercel/blob');
 
 const DEFAULT_STATE = {
@@ -97,10 +98,15 @@ module.exports = async function handler(req, res) {
 
   if (req.method === 'POST') {
     try {
-      await requireAdmin(req.headers.authorization);
+      const adminCtx = await requireAdmin(req.headers.authorization);
       const body = await readBody(req);
       const state = normalizeState(body.maintenance || {});
       await saveToBlob(state);
+      logStoreMaintenance({
+        admin: adminCtx.username,
+        global: state.global,
+        message: state.message,
+      });
       return json(res, 200, { ok: true, maintenance: { ...state, _storage: 'blob' } });
     } catch (err) {
       const code = /beheer|admin|token|log/i.test(err.message) ? 403 : 500;

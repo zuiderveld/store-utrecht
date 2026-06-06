@@ -8,6 +8,7 @@ const {
   hasAdminAccounts,
 } = require('../store/admin-auth');
 const { exchangeCode, verifyStoreMember } = require('../store/discord-store');
+const { logStoreAdminLogin } = require('../store/discord-webhooks');
 
 function bearerToken(req) {
   const header = req.headers.authorization;
@@ -48,6 +49,7 @@ module.exports = async function handler(req, res) {
       }
 
       const accessToken = await createAdminSession(discord.username);
+      logStoreAdminLogin({ username: discord.username, method: 'discord' });
       return json(res, 200, {
         ok: true,
         username: discord.username,
@@ -72,6 +74,7 @@ module.exports = async function handler(req, res) {
       }
 
       const accessToken = await createAdminSession(username);
+      logStoreAdminLogin({ username, method: 'admin-password' });
       return json(res, 200, {
         ok: true,
         username,

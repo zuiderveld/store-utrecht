@@ -4,6 +4,7 @@ const { assertStoreOpen } = require('./store-maintenance');
 const { saveState } = require('../store/blob-store');
 const { findUserInState, purchaseCart, normalizeProductIds } = require('../store/purchase-core');
 const { processPendingDiscordRoleOrders } = require('../store/discord-role-fulfill');
+const { logStorePurchase } = require('../store/discord-webhooks');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -20,16 +21,26 @@ module.exports = async function handler(req, res) {
     let orders = [];
     let newBalance = 0;
     let total = 0;
+    let buyer = null;
 
     await saveState(async (state) => {
       const user = findUserInState(state, ctx.user);
       if (!user) throw new Error('Gebruiker niet gevonden');
+      buyer = user;
       const result = purchaseCart(state, user, productIds);
       orders = result.orders;
       newBalance = result.coins;
       total = result.total;
       await processPendingDiscordRoleOrders(state);
       return state;
+    });
+
+    logStorePurchase({
+      source: 'Website',
+      user: buyer,
+      orders,
+      total,
+      newBalance,
     });
 
     return json(res, 200, {

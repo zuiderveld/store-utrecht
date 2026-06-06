@@ -3,6 +3,7 @@ const { cors, json, readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
 const { saveState, getState, loadCatalogBackup, writeCatalogBackup } = require('../store/blob-store');
 const { findUser } = require('../store/auth-sessions');
+const { logStoreAdminAction } = require('../store/discord-webhooks');
 
 function slugify(s) {
   return String(s)
@@ -75,7 +76,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    await requireAdmin(req.headers.authorization);
+    const adminCtx = await requireAdmin(req.headers.authorization);
     const body = req.method === 'GET' ? {} : await readBody(req);
     const action = body.action || req.query?.action;
 
@@ -106,11 +107,13 @@ module.exports = async function handler(req, res) {
       const state = await getState();
       const backup = await writeCatalogBackup(state);
       if (!backup) throw new Error('Catalog backup mislukt — check BLOB_READ_WRITE_TOKEN');
-      return json(res, 200, {
+      const payload = {
         ok: true,
         savedAt: backup.savedAt,
         counts: { categories: backup.categories.length, products: backup.products.length },
-      });
+      };
+      logStoreAdminAction(adminCtx, action, body, payload);
+      return json(res, 200, payload);
     }
 
     if (req.method === 'POST' && action === 'catalog-restore') {
@@ -123,11 +126,13 @@ module.exports = async function handler(req, res) {
         state.products = backup.products;
         return state;
       });
-      return json(res, 200, {
+      const payload = {
         ok: true,
         restoredAt: backup.savedAt || null,
         counts: { categories: backup.categories.length, products: backup.products.length },
-      });
+      };
+      logStoreAdminAction(adminCtx, action, body, payload);
+      return json(res, 200, payload);
     }
 
     if (req.method === 'POST' && action === 'catalog-import') {
@@ -141,10 +146,12 @@ module.exports = async function handler(req, res) {
         state.products = products;
         return state;
       });
-      return json(res, 200, {
+      const payload = {
         ok: true,
         counts: { categories: categories.length, products: products.length },
-      });
+      };
+      logStoreAdminAction(adminCtx, action, body, payload);
+      return json(res, 200, payload);
     }
 
     if (req.method !== 'POST') return json(res, 405, { error: 'Gebruik GET snapshot of POST acties' });
@@ -279,6 +286,8 @@ module.exports = async function handler(req, res) {
       }
       return state;
     });
+
+    logStoreAdminAction(adminCtx, action, body, result);
 
     return json(res, 200, result);
   } catch (err) {
