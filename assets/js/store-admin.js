@@ -267,11 +267,16 @@
       });
       btn.classList.add('active');
       document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'backup') {
+        renderBackupLiveStats();
+        loadBackupStatus();
+      }
     };
   });
 
   function renderAll() {
     renderStats();
+    renderBackupLiveStats();
 
     const catTable = document.getElementById('catTable');
     catTable.innerHTML = snapshot.categories.length
@@ -680,7 +685,6 @@
     applyMaintState(state);
   }
 
-  var formMaintenance = document.getElementById('formMaintenance');
   if (formMaintenance) {
     formMaintenance.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -706,6 +710,185 @@
     });
   }
 
+  function downloadCatalogJson() {
+    var payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      categories: snapshot.categories || [],
+      products: snapshot.products || [],
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'urp-store-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function renderBackupLiveStats() {
+    var live = document.getElementById('backupStatLive');
+    var liveSub = document.getElementById('backupStatLiveSub');
+    if (!live) return;
+    var cats = (snapshot.categories || []).length;
+    var prods = (snapshot.products || []).length;
+    live.textContent = prods + ' producten';
+    if (liveSub) liveSub.textContent = cats + ' categorieën · live catalogus';
+  }
+
+  function applyBackupStatus(data) {
+    var cloud = document.getElementById('backupStatCloud');
+    var cloudSub = document.getElementById('backupStatCloudSub');
+    var when = document.getElementById('backupStatWhen');
+    var whenSub = document.getElementById('backupStatWhenSub');
+
+    if (!data || !data.backup) {
+      if (cloud) cloud.textContent = 'Geen backup';
+      if (cloudSub) cloudSub.textContent = 'Nog niet opgeslagen in cloud';
+      if (when) when.textContent = '—';
+      if (whenSub) whenSub.textContent = 'Maak je eerste backup';
+      return;
+    }
+
+    var b = data.backup;
+    var catCount = (b.categories || []).length;
+    var prodCount = (b.products || []).length;
+    var whenStr = b.savedAt ? new Date(b.savedAt).toLocaleString('nl-NL') : 'Onbekend';
+
+    if (cloud) cloud.textContent = prodCount + ' producten';
+    if (cloudSub) cloudSub.textContent = catCount + ' categorieën in cloud';
+    if (when) when.textContent = whenStr.split(',')[0] || whenStr;
+    if (whenSub) whenSub.textContent = whenStr;
+  }
+
+  async function loadBackupStatus() {
+    try {
+      var data = await adminApiRequest('/api/store-admin?action=catalog-backup');
+      applyBackupStatus(data);
+    } catch (e) {
+      applyBackupStatus(null);
+    }
+  }
+
+  var pendingBackupFile = null;
+
+  function setBackupFileLabel(name) {
+    var label = document.getElementById('backupFileLabel');
+    var zone = document.getElementById('backupDropZone');
+    if (!label || !zone) return;
+    if (name) {
+      label.textContent = name;
+      zone.classList.add('has-file');
+    } else {
+      label.textContent = 'Klik of sleep je backup-bestand';
+      zone.classList.remove('has-file');
+    }
+  }
+
+  var btnBackupDownload = document.getElementById('btnBackupDownload');
+  if (btnBackupDownload) {
+    btnBackupDownload.onclick = async function () {
+      var label = btnBackupDownload.querySelector('strong');
+      var prevText = label ? label.textContent : 'Backup downloaden';
+      btnBackupDownload.disabled = true;
+      if (label) label.textContent = 'Bezig…';
+      try {
+        await adminApi({ action: 'catalog-backup-save' });
+        await loadSnapshot();
+        downloadCatalogJson();
+        showToast('Backup opgeslagen in cloud en gedownload');
+        await loadBackupStatus();
+      } catch (err) {
+        showToast(err.message || 'Backup mislukt');
+      } finally {
+        btnBackupDownload.disabled = false;
+        if (label) label.textContent = prevText;
+      }
+    };
+  }
+
+  var btnBackupCloudRestore = document.getElementById('btnBackupCloudRestore');
+  if (btnBackupCloudRestore) {
+    btnBackupCloudRestore.onclick = async function () {
+      if (!confirm('Catalogus herstellen uit cloud-backup? Huidige producten/categorieën worden overschreven.')) {
+        return;
+      }
+      try {
+        var data = await adminApi({ action: 'catalog-restore' });
+        showToast(
+          'Hersteld: ' + data.counts.products + ' producten, ' + data.counts.categories + ' categorieën'
+        );
+        await loadSnapshot();
+        await loadBackupStatus();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+  }
+
+  var backupFileInput = document.getElementById('backupFileInput');
+  var backupDropZone = document.getElementById('backupDropZone');
+  if (backupFileInput) {
+    backupFileInput.addEventListener('change', function () {
+      var file = backupFileInput.files && backupFileInput.files[0];
+      pendingBackupFile = file || null;
+      setBackupFileLabel(file ? file.name : '');
+    });
+  }
+  if (backupDropZone) {
+    backupDropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      backupDropZone.classList.add('dragover');
+    });
+    backupDropZone.addEventListener('dragleave', function () {
+      backupDropZone.classList.remove('dragover');
+    });
+    backupDropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      backupDropZone.classList.remove('dragover');
+      var file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      pendingBackupFile = file;
+      setBackupFileLabel(file.name);
+    });
+  }
+
+  var btnBackupFileRestore = document.getElementById('btnBackupFileRestore');
+  if (btnBackupFileRestore && backupFileInput) {
+    btnBackupFileRestore.onclick = async function () {
+      var file = (backupFileInput.files && backupFileInput.files[0]) || pendingBackupFile;
+      if (!file) return showToast('Kies eerst een .json bestand');
+      if (!confirm('Catalogus herstellen uit dit bestand? Huidige producten/categorieën worden overschreven.')) {
+        return;
+      }
+      btnBackupFileRestore.disabled = true;
+      try {
+        var text = await file.text();
+        var parsed = JSON.parse(text);
+        var categories = parsed.categories;
+        var products = parsed.products;
+        if (!Array.isArray(categories) || !Array.isArray(products)) {
+          throw new Error('Bestand moet categories en products bevatten');
+        }
+        var data = await adminApi({ action: 'catalog-import', categories: categories, products: products });
+        showToast(
+          'Import gelukt: ' + data.counts.products + ' producten, ' + data.counts.categories + ' categorieën'
+        );
+        backupFileInput.value = '';
+        pendingBackupFile = null;
+        setBackupFileLabel('');
+        await loadSnapshot();
+        await loadBackupStatus();
+      } catch (err) {
+        showToast(err.message || 'Import mislukt');
+      } finally {
+        btnBackupFileRestore.disabled = false;
+      }
+    };
+  }
+
   if (adminLoginForm) {
     adminLoginForm.onsubmit = async function (e) {
       e.preventDefault();
@@ -721,6 +904,7 @@
         openAdminApp();
         await loadSnapshot();
         await loadMaintenance();
+        await loadBackupStatus();
         syncProductTypeFields();
         showToast('Ingelogd als beheerder');
       } catch (err) {
@@ -749,6 +933,7 @@
         openAdminApp();
         await loadSnapshot();
         await loadMaintenance();
+        await loadBackupStatus();
         syncProductTypeFields();
         showToast('Ingelogd via Discord');
         return;
@@ -802,6 +987,7 @@
     try {
       await loadSnapshot();
       await loadMaintenance();
+      await loadBackupStatus();
       syncProductTypeFields();
     } catch (e) {
       showToast(e.message);

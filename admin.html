@@ -255,79 +255,91 @@
     </div>
 
     <div id="panel-backup" class="admin-panel">
-        <div class="admin-backup-intro">
-            <div>
-                <h3>Catalogus backup</h3>
-                <p>Bewaar al je producten en categorieën veilig. Spelers, coins en orders blijven bij herstellen gewoon staan.</p>
-            </div>
-            <span class="admin-backup-badge" id="backupAutoBadge">Auto-backup aan</span>
-        </div>
-
-        <div class="admin-backup-stats">
-            <div class="admin-backup-stat">
-                <span class="admin-backup-stat-label">Huidige catalogus</span>
-                <strong id="backupStatLive">—</strong>
-                <small id="backupStatLiveSub">producten & categorieën live</small>
-            </div>
-            <div class="admin-backup-stat">
-                <span class="admin-backup-stat-label">Cloud backup</span>
-                <strong id="backupStatCloud">—</strong>
-                <small id="backupStatCloudSub">Vercel Blob</small>
-            </div>
-            <div class="admin-backup-stat admin-backup-stat-accent">
-                <span class="admin-backup-stat-label">Laatst opgeslagen</span>
-                <strong id="backupStatWhen">—</strong>
-                <small id="backupStatWhenSub">cloud snapshot</small>
-            </div>
-        </div>
-
-        <div class="admin-backup-grid">
-            <div class="admin-backup-card admin-backup-card-primary">
-                <div class="admin-backup-card-top">
-                    <span class="admin-backup-icon" aria-hidden="true">💾</span>
-                    <div>
-                        <h4>Backup maken &amp; downloaden</h4>
-                        <p>Slaat eerst op in de cloud en downloadt direct een <code>.json</code> op je pc.</p>
-                    </div>
+        <div class="admin-backup-shell">
+            <header class="admin-backup-hero">
+                <div class="admin-backup-hero-copy">
+                    <span class="admin-backup-eyebrow">Catalogus backup</span>
+                    <h3>Producten &amp; categorieën veilig bewaren</h3>
+                    <p>Spelers, coins en orders blijven bij herstellen gewoon staan. Bij elke download wordt automatisch een cloud-backup gemaakt.</p>
+                    <span class="admin-backup-badge" id="backupAutoBadge">Auto-backup bij opslaan</span>
                 </div>
-                <div class="admin-backup-actions">
-                    <button type="button" class="btn-main admin-backup-btn-main" id="btnBackupMake">
-                        Backup maken &amp; downloaden
+                <div class="admin-backup-hero-cta">
+                    <button type="button" class="admin-backup-download-btn" id="btnBackupDownload">
+                        <span class="admin-backup-download-icon" aria-hidden="true">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                        </span>
+                        <span class="admin-backup-download-text">
+                            <strong>Backup downloaden</strong>
+                            <small>Cloud opslaan + .json op je pc</small>
+                        </span>
                     </button>
-                    <button type="button" class="btn-outline" id="btnBackupDownload">Alleen downloaden</button>
+                    <p class="admin-backup-hero-note">Bestand: <code>urp-store-backup-YYYY-MM-DD.json</code></p>
                 </div>
+            </header>
+
+            <div class="admin-backup-stats">
+                <article class="admin-backup-stat">
+                    <div class="admin-backup-stat-icon live" aria-hidden="true">📦</div>
+                    <div class="admin-backup-stat-body">
+                        <span class="admin-backup-stat-label">Live catalogus</span>
+                        <strong id="backupStatLive">—</strong>
+                        <small id="backupStatLiveSub">producten &amp; categorieën</small>
+                    </div>
+                </article>
+                <article class="admin-backup-stat">
+                    <div class="admin-backup-stat-icon cloud" aria-hidden="true">☁</div>
+                    <div class="admin-backup-stat-body">
+                        <span class="admin-backup-stat-label">Cloud backup</span>
+                        <strong id="backupStatCloud">—</strong>
+                        <small id="backupStatCloudSub">Vercel Blob</small>
+                    </div>
+                </article>
+                <article class="admin-backup-stat admin-backup-stat-accent">
+                    <div class="admin-backup-stat-icon time" aria-hidden="true">🕐</div>
+                    <div class="admin-backup-stat-body">
+                        <span class="admin-backup-stat-label">Laatst opgeslagen</span>
+                        <strong id="backupStatWhen">—</strong>
+                        <small id="backupStatWhenSub">cloud snapshot</small>
+                    </div>
+                </article>
             </div>
 
-            <div class="admin-backup-card">
-                <div class="admin-backup-card-top">
-                    <span class="admin-backup-icon" aria-hidden="true">☁</span>
-                    <div>
-                        <h4>Cloud backup</h4>
-                        <p>Handmatig opslaan of terugzetten vanuit <code>catalog-backup.json</code>.</p>
-                    </div>
-                </div>
-                <div class="admin-backup-actions">
-                    <button type="button" class="btn-outline" id="btnBackupCloudSave">Opslaan in cloud</button>
-                    <button type="button" class="btn-outline admin-backup-btn-danger" id="btnBackupCloudRestore">Herstel uit cloud</button>
-                </div>
-            </div>
+            <div class="admin-backup-restore">
+                <h4 class="admin-backup-restore-title">Herstellen</h4>
+                <div class="admin-backup-grid">
+                    <article class="admin-backup-card">
+                        <div class="admin-backup-card-top">
+                            <span class="admin-backup-icon restore-cloud" aria-hidden="true">☁</span>
+                            <div>
+                                <h4>Terugzetten uit cloud</h4>
+                                <p>Herstel de laatste snapshot uit <code>catalog-backup.json</code>.</p>
+                            </div>
+                        </div>
+                        <div class="admin-backup-actions">
+                            <button type="button" class="btn-outline admin-backup-btn-danger" id="btnBackupCloudRestore">Herstel uit cloud</button>
+                        </div>
+                    </article>
 
-            <div class="admin-backup-card admin-backup-card-wide">
-                <div class="admin-backup-card-top">
-                    <span class="admin-backup-icon" aria-hidden="true">📂</span>
-                    <div>
-                        <h4>Herstel uit bestand</h4>
-                        <p>Upload een eerder gedownloade backup (.json).</p>
-                    </div>
-                </div>
-                <label class="admin-backup-drop" id="backupDropZone" for="backupFileInput">
-                    <input type="file" id="backupFileInput" accept="application/json,.json" hidden>
-                    <span class="admin-backup-drop-icon">⬆</span>
-                    <span class="admin-backup-drop-title" id="backupFileLabel">Klik of sleep je backup-bestand</span>
-                    <span class="admin-backup-drop-hint">Alleen .json — categories + products</span>
-                </label>
-                <div class="admin-backup-actions">
-                    <button type="button" class="btn-main" id="btnBackupFileRestore">Herstel uit bestand</button>
+                    <article class="admin-backup-card">
+                        <div class="admin-backup-card-top">
+                            <span class="admin-backup-icon restore-file" aria-hidden="true">📂</span>
+                            <div>
+                                <h4>Terugzetten uit bestand</h4>
+                                <p>Upload een eerder gedownloade backup (.json).</p>
+                            </div>
+                        </div>
+                        <label class="admin-backup-drop" id="backupDropZone" for="backupFileInput">
+                            <input type="file" id="backupFileInput" accept="application/json,.json" hidden>
+                            <span class="admin-backup-drop-icon" aria-hidden="true">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m8 8 4-4 4 4"/><path d="M4 20h16"/></svg>
+                            </span>
+                            <span class="admin-backup-drop-title" id="backupFileLabel">Klik of sleep je backup-bestand</span>
+                            <span class="admin-backup-drop-hint">Alleen .json — categories + products</span>
+                        </label>
+                        <div class="admin-backup-actions">
+                            <button type="button" class="btn-main admin-backup-btn-restore" id="btnBackupFileRestore">Herstel uit bestand</button>
+                        </div>
+                    </article>
                 </div>
             </div>
         </div>

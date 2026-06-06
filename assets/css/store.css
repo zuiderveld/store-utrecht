@@ -2274,3 +2274,377 @@
     padding: 14px;
     font-size: 0.95rem;
 }
+
+/* =============================
+   ADMIN — BACKUP PANEL
+============================= */
+#panel-backup.admin-panel.active {
+    display: block;
+}
+
+.admin-backup-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.admin-backup-hero {
+    display: grid;
+    grid-template-columns: 1fr minmax(260px, 340px);
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.5rem 1.75rem;
+    border-radius: 22px;
+    background:
+        radial-gradient(600px 280px at 100% 0%, rgba(59, 130, 246, 0.22), transparent 55%),
+        linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.92));
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.admin-backup-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #93c5fd;
+    margin-bottom: 0.4rem;
+}
+
+.admin-backup-hero-copy h3 {
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+    color: #f8fafc;
+}
+
+.admin-backup-hero-copy p {
+    color: rgba(234, 240, 255, 0.62);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    max-width: 540px;
+    margin-bottom: 0.85rem;
+}
+
+.admin-backup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(34, 197, 94, 0.15);
+    color: #86efac;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.admin-backup-hero-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+}
+
+.admin-backup-download-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: 100%;
+    padding: 1rem 1.15rem;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: left;
+    color: #fff;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.45);
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.admin-backup-download-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(37, 99, 235, 0.55);
+}
+
+.admin-backup-download-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.admin-backup-download-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.18);
+    flex-shrink: 0;
+}
+
+.admin-backup-download-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.admin-backup-download-text strong {
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.admin-backup-download-text small {
+    font-size: 0.78rem;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.admin-backup-hero-note {
+    font-size: 0.75rem;
+    color: rgba(234, 240, 255, 0.45);
+    text-align: center;
+}
+
+.admin-backup-hero-note code {
+    color: #93c5fd;
+    font-size: 0.72rem;
+}
+
+.admin-backup-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.admin-backup-stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 1.1rem 1.15rem;
+    min-height: 96px;
+}
+
+.admin-backup-stat-accent {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: linear-gradient(160deg, rgba(59, 130, 246, 0.12), rgba(255, 255, 255, 0.03));
+}
+
+.admin-backup-stat-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.admin-backup-stat-icon.live {
+    background: rgba(168, 85, 247, 0.15);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.admin-backup-stat-icon.cloud {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.admin-backup-stat-icon.time {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.admin-backup-stat-body {
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-backup-stat-label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(234, 240, 255, 0.42);
+    font-weight: 800;
+    margin-bottom: 0.3rem;
+}
+
+.admin-backup-stat strong {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #eef2ff;
+    line-height: 1.2;
+}
+
+.admin-backup-stat small {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.76rem;
+    color: rgba(234, 240, 255, 0.4);
+}
+
+.admin-backup-restore-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(234, 240, 255, 0.45);
+    margin: 0.25rem 0 0;
+}
+
+.admin-backup-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.admin-backup-card {
+    background: rgba(20, 24, 36, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.admin-backup-card-top {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+}
+
+.admin-backup-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-backup-icon.restore-cloud {
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.admin-backup-icon.restore-file {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.admin-backup-card h4 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin-bottom: 0.35rem;
+    color: #f1f5f9;
+}
+
+.admin-backup-card p {
+    font-size: 0.85rem;
+    color: rgba(234, 240, 255, 0.55);
+    line-height: 1.5;
+}
+
+.admin-backup-card p code {
+    font-size: 0.8rem;
+    color: #93c5fd;
+}
+
+.admin-backup-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.admin-backup-btn-restore {
+    width: 100%;
+    font-weight: 800;
+}
+
+.admin-backup-btn-danger {
+    width: 100%;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #fca5a5 !important;
+    font-weight: 700;
+}
+
+.admin-backup-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.12) !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+}
+
+.admin-backup-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 1.35rem 1rem;
+    border-radius: 14px;
+    border: 2px dashed rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.05);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    text-align: center;
+}
+
+.admin-backup-drop:hover,
+.admin-backup-drop.dragover {
+    border-color: rgba(59, 130, 246, 0.75);
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.admin-backup-drop-icon {
+    display: flex;
+    color: #93c5fd;
+    opacity: 0.9;
+}
+
+.admin-backup-drop-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: #eef2ff;
+}
+
+.admin-backup-drop-hint {
+    font-size: 0.76rem;
+    color: rgba(234, 240, 255, 0.42);
+}
+
+.admin-backup-drop.has-file {
+    border-color: rgba(34, 197, 94, 0.55);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.admin-backup-drop.has-file .admin-backup-drop-icon {
+    color: #86efac;
+}
+
+@media (max-width: 960px) {
+    .admin-backup-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-backup-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-backup-grid {
+        grid-template-columns: 1fr;
+    }
+}
