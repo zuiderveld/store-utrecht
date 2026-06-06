@@ -51,6 +51,7 @@ function productTypeLabel(type) {
     vehicle: 'Voertuig',
     discord_role: 'Discord rol',
     external_link: 'Externe link',
+    weapon_camo: 'Wapen camo',
   };
   return map[type] || type || 'Product';
 }

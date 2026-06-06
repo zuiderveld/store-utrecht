@@ -57,6 +57,22 @@ function validateProductMeta(product) {
     meta.externalUrl = url;
     if (meta.buttonLabel) meta.buttonLabel = String(meta.buttonLabel).trim();
   }
+  if (type === 'weapon_camo') {
+    const weapon = String(meta.weapon || '').trim().toUpperCase();
+    const camoId = String(meta.camoId || '').trim().toLowerCase();
+    if (!weapon || !weapon.startsWith('WEAPON_')) {
+      throw new Error(`${label}: wapen verplicht (meta.weapon, bijv. WEAPON_PISTOL)`);
+    }
+    if (!camoId) {
+      throw new Error(`${label}: camo ID verplicht (meta.camoId, bijv. purple_haze)`);
+    }
+    meta.weapon = weapon;
+    meta.camoId = camoId;
+    meta.weaponLabel = String(meta.weaponLabel || '').trim();
+    meta.weaponGroup = String(meta.weaponGroup || 'OVERIG').trim().toUpperCase();
+    meta.tint = Math.min(7, Math.max(0, Number(meta.tint) || 0));
+    if (meta.oxItem) meta.oxItem = String(meta.oxItem).trim().toLowerCase();
+  }
 }
 
 function mergeOrderMeta(state, order) {

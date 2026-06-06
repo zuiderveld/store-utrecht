@@ -127,6 +127,7 @@
                         <select name="type" id="prodType">
                             <option value="vehicle">Voertuig (garage)</option>
                             <option value="item">Item (ox_inventory)</option>
+                            <option value="weapon_camo">Wapen camo</option>
                             <option value="discord_role">Discord rol</option>
                             <option value="external_link">Externe link (geen coins)</option>
                             <option value="other">Overig</option>
@@ -155,6 +156,34 @@
                         <span class="admin-field-hint">Exacte key uit ox_inventory — bijv. <code>water</code>, <code>bread</code>, <code>burger</code>, <code>phone</code> (kleine letters)</span>
                     </label>
                     <label>Aantal <input name="itemCount" id="prodItemCount" type="number" min="1" placeholder="1" value="1"></label>
+                    </div>
+                    <div class="admin-form-section span-2" id="prodSectionCamo">
+                        <span>Wapen camo (type weapon_camo)</span>
+                    </div>
+                    <div class="admin-form-grid-prod camo-fields span-2" id="prodCamoFields">
+                    <label>Wapen hash <strong class="req">*</strong>
+                        <input name="camoWeapon" id="prodCamoWeapon" placeholder="WEAPON_COMBATPISTOL" autocomplete="off">
+                        <span class="admin-field-hint">GTA wapennaam — hoofdletters, bijv. <code>WEAPON_PISTOL</code></span>
+                    </label>
+                    <label>Wapen label
+                        <input name="camoWeaponLabel" id="prodCamoWeaponLabel" placeholder="Phantom 17">
+                    </label>
+                    <label>Groep
+                        <input name="camoWeaponGroup" id="prodCamoWeaponGroup" placeholder="PISTOLEN">
+                        <span class="admin-field-hint">Sidebar-groep in store, bijv. PISTOLEN, SMGS</span>
+                    </label>
+                    <label>Camo ID <strong class="req">*</strong>
+                        <input name="camoId" id="prodCamoId" placeholder="purple_haze" autocomplete="off">
+                        <span class="admin-field-hint">Unieke ID — zelfde als in je camo-script in-game</span>
+                    </label>
+                    <label>Tint (0–7)
+                        <input name="camoTint" id="prodCamoTint" type="number" min="0" max="7" placeholder="0">
+                        <span class="admin-field-hint">Standaard GTA wapentint — optioneel naast camo ID</span>
+                    </label>
+                    <label class="span-2">ox unlock item
+                        <input name="camoOxItem" id="prodCamoOxItem" placeholder="weapon_camo" value="weapon_camo">
+                        <span class="admin-field-hint">Item dat speler krijgt — zie <code>CAMO-STORE-URP.md</code></span>
+                    </label>
                     </div>
                     <div class="admin-form-section span-2" id="prodSectionDiscordRole">
                         <span>Discord rol (type discord_role)</span>

@@ -113,6 +113,12 @@
     document.getElementById('prodExternalUrl').value = '';
     document.getElementById('prodExternalLabel').value = 'Naar Discord';
     document.getElementById('prodPriceUnit').value = '€';
+    document.getElementById('prodCamoWeapon').value = '';
+    document.getElementById('prodCamoWeaponLabel').value = '';
+    document.getElementById('prodCamoWeaponGroup').value = '';
+    document.getElementById('prodCamoId').value = '';
+    document.getElementById('prodCamoTint').value = '';
+    document.getElementById('prodCamoOxItem').value = 'weapon_camo';
     document.getElementById('prodActive').checked = true;
     document.getElementById('prodType').value = 'vehicle';
     if (snapshot.categories.length) {
@@ -220,10 +226,13 @@
     const sectionDiscordRole = document.getElementById('prodSectionDiscordRole');
     const sectionExternal = document.getElementById('prodSectionExternal');
     const externalFields = document.getElementById('prodExternalFields');
+    const sectionCamo = document.getElementById('prodSectionCamo');
+    const camoFields = document.getElementById('prodCamoFields');
     const showVehicle = type === 'vehicle';
     const showItem = type === 'item';
     const showDiscordRole = type === 'discord_role';
     const showExternal = type === 'external_link';
+    const showCamo = type === 'weapon_camo';
 
     vehicleFields.classList.toggle('hidden', !showVehicle);
     sectionVehicle.classList.toggle('hidden', !showVehicle);
@@ -233,10 +242,14 @@
     sectionDiscordRole.classList.toggle('hidden', !showDiscordRole);
     externalFields.classList.toggle('hidden', !showExternal);
     sectionExternal.classList.toggle('hidden', !showExternal);
+    camoFields.classList.toggle('hidden', !showCamo);
+    sectionCamo.classList.toggle('hidden', !showCamo);
     document.getElementById('prodOxItem').required = showItem;
     document.getElementById('prodModel').required = showVehicle;
     document.getElementById('prodDiscordRoleId').required = showDiscordRole;
     document.getElementById('prodExternalUrl').required = showExternal;
+    document.getElementById('prodCamoWeapon').required = showCamo;
+    document.getElementById('prodCamoId').required = showCamo;
     document.getElementById('prodPriceLabel').textContent = showExternal
       ? 'Weergaveprijs (geen coins)'
       : 'Prijs (coins)';
@@ -475,6 +488,12 @@
           externalUrl: document.getElementById('prodExternalUrl').value.trim(),
           buttonLabel: document.getElementById('prodExternalLabel').value.trim() || 'Naar Discord',
           priceUnit: document.getElementById('prodPriceUnit').value.trim(),
+          weapon: document.getElementById('prodCamoWeapon').value.trim().toUpperCase(),
+          weaponLabel: document.getElementById('prodCamoWeaponLabel').value.trim(),
+          weaponGroup: document.getElementById('prodCamoWeaponGroup').value.trim().toUpperCase(),
+          camoId: document.getElementById('prodCamoId').value.trim().toLowerCase(),
+          tint: document.getElementById('prodCamoTint').value.trim(),
+          oxItem: document.getElementById('prodCamoOxItem').value.trim().toLowerCase() || 'weapon_camo',
         },
       });
       showToast('Product opgeslagen');
@@ -627,6 +646,12 @@
       document.getElementById('prodExternalUrl').value = p.meta?.externalUrl || p.meta?.url || '';
       document.getElementById('prodExternalLabel').value = p.meta?.buttonLabel || 'Naar Discord';
       document.getElementById('prodPriceUnit').value = p.meta?.priceUnit != null ? p.meta.priceUnit : '€';
+      document.getElementById('prodCamoWeapon').value = p.meta?.weapon || '';
+      document.getElementById('prodCamoWeaponLabel').value = p.meta?.weaponLabel || '';
+      document.getElementById('prodCamoWeaponGroup').value = p.meta?.weaponGroup || '';
+      document.getElementById('prodCamoId').value = p.meta?.camoId || '';
+      document.getElementById('prodCamoTint').value = p.meta?.tint != null ? p.meta.tint : '';
+      document.getElementById('prodCamoOxItem').value = p.meta?.oxItem || 'weapon_camo';
       document.getElementById('prodGarage').value = p.meta?.garage || '';
       document.getElementById('prodTopspeed').value = p.meta?.topspeed || '';
       document.getElementById('prodTrunk').value = p.meta?.trunk || '';

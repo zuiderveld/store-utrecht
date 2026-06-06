@@ -136,16 +136,15 @@
         </div>
         <aside class="store-about-aside">
             <div class="store-policy-card">
-                <h3>Donaties &amp; Refunds</h3>
+                <h3>URP Store &amp; coins</h3>
                 <p>
-                    Alle donaties en aankopen via onze Tebex store ondersteunen de ontwikkeling van Utrecht Roleplay.
-                    Houd er rekening mee dat alle betalingen definitief zijn.
+                    Aankopen op deze store gebeuren met <strong>coins</strong>. Items, voertuigen en camo&apos;s worden na betaling automatisch verwerkt in-game (Discord + FiveM gekoppeld).
                 </p>
                 <p>
-                    Er worden <strong>geen refunds of terugbetalingen</strong> gegeven op donaties of aankopen.
+                    Coins en store-aankopen zijn <strong>definitief</strong> — er worden geen refunds gegeven.
                 </p>
                 <p class="store-policy-note">
-                    Door een aankoop te doen, ga je akkoord met deze voorwaarden.
+                    Door te kopen ga je akkoord met deze voorwaarden.
                 </p>
             </div>
         </aside>
@@ -171,6 +170,48 @@
 
     <div class="store-layout">
         <main class="store-main">
+            <div class="store-camo-panel hidden" id="camoPanel" aria-hidden="true">
+                <header class="store-camo-head">
+                    <div>
+                        <span class="store-camo-eyebrow">Camo editor</span>
+                        <h2>Kies wapen &amp; camo</h2>
+                        <p>Koop een skin met coins — in-game krijg je een unlock-item voor je wapen.</p>
+                    </div>
+                </header>
+                <div class="store-camo-layout">
+                    <aside class="store-camo-weapons">
+                        <h3>Wapens</h3>
+                        <div class="store-camo-weapon-groups" id="camoWeaponGroups"></div>
+                    </aside>
+                    <div class="store-camo-preview-wrap">
+                        <div class="store-camo-preview" id="camoPreviewBox">
+                            <img id="camoPreviewImg" class="store-camo-preview-img" alt="" hidden>
+                            <div class="store-camo-preview-placeholder" id="camoPreviewPlaceholder">
+                                <span>🎯</span>
+                                <p>Selecteer een camo</p>
+                            </div>
+                            <div class="store-camo-preview-active" id="camoPreviewActive" hidden>
+                                <img id="camoPreviewActiveImg" alt="">
+                                <span id="camoPreviewActiveName"></span>
+                            </div>
+                        </div>
+                        <p class="store-camo-preview-weapon" id="camoPreviewWeapon">—</p>
+                        <p class="store-camo-preview-hint">Sleep preview om te draaien · scroll om te zoomen</p>
+                        <div class="store-camo-buybar">
+                            <div class="store-camo-buybar-price">
+                                <span>Geselecteerd</span>
+                                <strong id="camoSelectedName">Geen camo</strong>
+                                <em id="camoSelectedPrice"></em>
+                            </div>
+                            <button type="button" class="btn-buy store-camo-buy-btn" id="camoAddCart" disabled>🛒 Toevoegen</button>
+                        </div>
+                    </div>
+                    <aside class="store-camo-skins">
+                        <h3>Camo&apos;s</h3>
+                        <div class="store-camo-grid" id="camoGrid"></div>
+                    </aside>
+                </div>
+            </div>
             <div class="store-grid" id="productGrid"></div>
             <p id="emptyMsg" class="store-empty" style="display:none">Geen producten gevonden in deze categorie.</p>
         </main>
@@ -290,7 +331,7 @@
         </div>
     </div>
     <p class="store-footer-copy">© 2026 Utrecht Roleplay — Alle rechten voorbehouden</p>
-    <p class="store-footer-legal">Donaties en aankopen zijn definitief — geen refunds. <a href="#over-urp">Meer info</a></p>
+    <p class="store-footer-legal">Store-aankopen zijn definitief — geen refunds. <a href="#over-urp">Meer info</a></p>
 </footer>
 
 <script src="js/store-config.js"></script>

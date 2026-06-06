@@ -221,6 +221,25 @@ module.exports = async function handler(req, res) {
               priceUnit: String(row.meta?.priceUnit || '€').trim(),
             };
           }
+          if (row.type === 'weapon_camo') {
+            const weapon = String(row.meta?.weapon || '').trim().toUpperCase();
+            const camoId = String(row.meta?.camoId || '').trim().toLowerCase();
+            if (!weapon || !weapon.startsWith('WEAPON_')) {
+              throw new Error('Wapen camo vereist meta.weapon (bijv. WEAPON_PISTOL)');
+            }
+            if (!camoId) {
+              throw new Error('Wapen camo vereist meta.camoId (bijv. purple_haze)');
+            }
+            row.meta = {
+              ...(row.meta || {}),
+              weapon,
+              camoId,
+              weaponLabel: String(row.meta?.weaponLabel || '').trim(),
+              weaponGroup: String(row.meta?.weaponGroup || 'OVERIG').trim().toUpperCase(),
+              tint: Math.min(7, Math.max(0, Number(row.meta?.tint) || 0)),
+              oxItem: String(row.meta?.oxItem || 'weapon_camo').trim().toLowerCase(),
+            };
+          }
           result.product = row;
           break;
         }
