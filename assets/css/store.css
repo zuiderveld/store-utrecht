@@ -2840,64 +2840,181 @@
 .store-camo-scene {
     position: relative;
     flex: 1;
-    min-height: 380px;
+    min-height: 420px;
     border-radius: 18px;
     background:
-        radial-gradient(circle at 50% 65%, rgba(59, 130, 246, 0.12), transparent 50%),
-        linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.45));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+        radial-gradient(ellipse at 50% 18%, rgba(34, 197, 94, 0.1), transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(59, 130, 246, 0.14), transparent 55%),
+        linear-gradient(180deg, #0a1018 0%, #060912 100%);
+    border: 1px solid rgba(34, 197, 94, 0.15);
     overflow: hidden;
     cursor: grab;
-    perspective: 1100px;
+    perspective: 1400px;
+    perspective-origin: 50% 42%;
 }
 
 .store-camo-scene.dragging {
     cursor: grabbing;
 }
 
+.store-camo-scene-floor {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: 8%;
+    height: 42%;
+    transform: rotateX(72deg);
+    transform-origin: center bottom;
+    background:
+        linear-gradient(rgba(34, 197, 94, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 197, 94, 0.08) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.12), transparent 70%);
+    background-size: 36px 36px, 36px 36px, 100% 100%;
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.store-camo-scene-glow {
+    position: absolute;
+    width: 55%;
+    height: 55%;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(34, 197, 94, 0.18), transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+}
+
 .store-camo-scene-grid {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-    mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 75%);
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at 50% 45%, black 25%, transparent 72%);
     pointer-events: none;
+    z-index: 0;
 }
 
-.store-camo-scene-inner {
+.store-camo-scene-pivot {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     transform-style: preserve-3d;
-    transition: transform 0.06s linear;
-}
-
-.store-camo-weapon-layer {
-    max-width: 78%;
-    max-height: 72%;
-    object-fit: contain;
-    filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.55));
-    transform: translateZ(40px);
-    position: relative;
+    transform: rotateX(-12deg);
+    transition: transform 0.08s linear;
     z-index: 2;
 }
 
-.store-camo-skin-layer {
+.store-camo-scene-inner {
+    position: relative;
+    width: min(88%, 520px);
+    height: min(72%, 320px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    transition: transform 0.05s linear;
+}
+
+.store-camo-weapon-stack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+    transform: translateZ(60px);
+    animation: camoWeaponFloat 4.5s ease-in-out infinite;
+}
+
+.store-camo-weapon-stack.is-missing {
+    animation: none;
+    opacity: 0.35;
+}
+
+@keyframes camoWeaponFloat {
+    0%, 100% { transform: translateZ(60px) translateY(0); }
+    50% { transform: translateZ(72px) translateY(-8px); }
+}
+
+.store-camo-weapon-shadow {
     position: absolute;
-    width: 62%;
-    height: 58%;
-    border-radius: 12px;
-    opacity: 0.72;
-    mix-blend-mode: color;
+    width: 70%;
+    height: 18%;
+    left: 50%;
+    bottom: 6%;
+    transform: translateX(-50%) translateZ(20px) rotateX(78deg);
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 72%);
+    filter: blur(6px);
     pointer-events: none;
-    transform: translateZ(42px);
+    z-index: 0;
+}
+
+.store-camo-weapon-base,
+.store-camo-weapon-shine,
+.store-camo-on-weapon {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: auto;
+    object-fit: contain;
+    object-position: center;
+    pointer-events: none;
+}
+
+.store-camo-weapon-base {
+    z-index: 1;
+    filter: drop-shadow(0 22px 32px rgba(0, 0, 0, 0.65));
+    transition: opacity 0.2s, filter 0.2s;
+}
+
+.store-camo-on-weapon {
+    z-index: 2;
+    mix-blend-mode: normal;
+    -webkit-mask-mode: alpha;
+    mask-mode: alpha;
+    filter: saturate(1.15) contrast(1.08) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
+}
+
+.store-camo-weapon-stack.has-camo .store-camo-on-weapon {
+    animation: camoShimmer 6s linear infinite;
+}
+
+@keyframes camoShimmer {
+    0% { filter: saturate(1.15) contrast(1.08) hue-rotate(0deg); }
+    50% { filter: saturate(1.25) contrast(1.12) hue-rotate(8deg); }
+    100% { filter: saturate(1.15) contrast(1.08) hue-rotate(0deg); }
+}
+
+.store-camo-weapon-shine {
     z-index: 3;
-    background-size: cover !important;
-    background-position: center !important;
+    opacity: 0.28;
+    mix-blend-mode: soft-light;
+    filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.08));
+}
+
+.store-camo-missing {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    z-index: 6;
+    max-width: 90%;
+    padding: 0.4rem 0.65rem;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+    font-size: 0.68rem;
+    text-align: center;
 }
 
 .store-camo-preview-placeholder {
@@ -2910,6 +3027,7 @@
     text-align: center;
     color: rgba(234, 240, 255, 0.35);
     z-index: 1;
+    pointer-events: none;
 }
 
 .store-camo-preview-placeholder span {

@@ -55,9 +55,13 @@
   const camoWeaponGroups = document.getElementById('camoWeaponGroups');
   const camoGrid = document.getElementById('camoGrid');
   const camoPreviewBox = document.getElementById('camoPreviewBox');
+  const camoScenePivot = document.getElementById('camoScenePivot');
   const camoSceneInner = document.getElementById('camoSceneInner');
-  const camoWeaponImg = document.getElementById('camoWeaponImg');
-  const camoSkinLayer = document.getElementById('camoSkinLayer');
+  const camoWeaponStack = document.getElementById('camoWeaponStack');
+  const camoWeaponBase = document.getElementById('camoWeaponBase');
+  const camoOnWeapon = document.getElementById('camoOnWeapon');
+  const camoWeaponShine = document.getElementById('camoWeaponShine');
+  const camoMissingHint = document.getElementById('camoMissingHint');
   const camoPreviewPlaceholder = document.getElementById('camoPreviewPlaceholder');
   const camoPreviewActive = document.getElementById('camoPreviewActive');
   const camoPreviewActiveImg = document.getElementById('camoPreviewActiveImg');
@@ -77,9 +81,10 @@
   let camoSelectedWeapon = null;
   let camoSelectedCamo = null;
   let camoWeaponFilter = '';
-  let camoPreviewRotation = 0;
+  let camoPreviewRotation = 24;
   let camoPreviewScale = 1;
-  let camoPreviewTilt = -8;
+  let camoPreviewTilt = -12;
+  let camoPreviewPitch = 8;
   const CART_KEY = 'urpStoreCart';
 
   function loadCart() {
@@ -283,16 +288,83 @@
     if (!camoSceneInner) return;
     camoSceneInner.style.transform =
       'rotateX(' +
-      camoPreviewTilt +
+      camoPreviewPitch +
       'deg) rotateY(' +
       camoPreviewRotation +
-      'deg) scale(' +
+      'deg) scale3d(' +
+      camoPreviewScale +
+      ',' +
+      camoPreviewScale +
+      ',' +
       camoPreviewScale +
       ')';
+    if (camoScenePivot) {
+      camoScenePivot.style.transform = 'rotateX(' + camoPreviewTilt + 'deg)';
+    }
+  }
+
+  function setCamoPaintLayer(weaponSrc, camo) {
+    if (!camoOnWeapon || !camoWeaponBase || !camoWeaponShine) return;
+
+    var mask = 'url("' + weaponSrc + '")';
+    camoWeaponBase.src = weaponSrc;
+    camoWeaponShine.src = weaponSrc;
+    camoWeaponBase.hidden = false;
+    camoWeaponShine.hidden = false;
+    if (camoWeaponStack) camoWeaponStack.classList.remove('is-missing');
+
+    if (camo) {
+      var cat = getCamoCatalog();
+      var camoImg = cat.camoImage ? cat.camoImage(camo.camoId) : '';
+      var bg = camo.css || 'linear-gradient(135deg,#666,#999)';
+      camoOnWeapon.hidden = false;
+      camoOnWeapon.style.background = bg;
+      camoOnWeapon.style.backgroundSize = 'cover';
+      camoOnWeapon.style.backgroundPosition = 'center';
+      if (camoImg) {
+        camoOnWeapon.style.backgroundImage = 'url("' + camoImg + '"), ' + bg;
+      } else {
+        camoOnWeapon.style.backgroundImage = bg;
+      }
+      camoOnWeapon.style.webkitMaskImage = mask;
+      camoOnWeapon.style.maskImage = mask;
+      camoOnWeapon.style.webkitMaskSize = 'contain';
+      camoOnWeapon.style.maskSize = 'contain';
+      camoOnWeapon.style.webkitMaskRepeat = 'no-repeat';
+      camoOnWeapon.style.maskRepeat = 'no-repeat';
+      camoOnWeapon.style.webkitMaskPosition = 'center';
+      camoOnWeapon.style.maskPosition = 'center';
+      if (camoWeaponStack) camoWeaponStack.classList.add('has-camo');
+      camoWeaponBase.style.opacity = '0.45';
+      camoWeaponBase.style.filter = 'brightness(0.55) contrast(1.1)';
+    } else {
+      camoOnWeapon.hidden = true;
+      if (camoWeaponStack) camoWeaponStack.classList.remove('has-camo');
+      camoWeaponBase.style.opacity = '1';
+      camoWeaponBase.style.filter = 'drop-shadow(0 18px 28px rgba(0,0,0,0.55))';
+    }
+  }
+
+  function showCamoMissing(weapon) {
+    if (camoWeaponBase) camoWeaponBase.hidden = true;
+    if (camoWeaponShine) camoWeaponShine.hidden = true;
+    if (camoOnWeapon) camoOnWeapon.hidden = true;
+    if (camoWeaponStack) camoWeaponStack.classList.add('is-missing');
+    if (camoPreviewPlaceholder) camoPreviewPlaceholder.hidden = true;
+    if (camoMissingHint) {
+      camoMissingHint.hidden = false;
+      camoMissingHint.textContent =
+        'PNG ontbreekt: assets/images/weapons/' + weapon + '.png — upload + redeploy Vercel';
+    }
+  }
+
+  function hideCamoMissing() {
+    if (camoMissingHint) camoMissingHint.hidden = true;
+    if (camoPreviewPlaceholder) camoPreviewPlaceholder.hidden = true;
   }
 
   function updateCamoPreview() {
-    if (!camoWeaponImg || !camoPreviewPlaceholder) return;
+    if (!camoWeaponBase || !camoPreviewPlaceholder) return;
     applyCamoSceneTransform();
 
     if (camoPreviewWeapon) {
@@ -302,56 +374,43 @@
     }
 
     if (!camoSelectedWeapon) {
-      camoWeaponImg.hidden = true;
-      if (camoSkinLayer) camoSkinLayer.hidden = true;
+      if (camoWeaponBase) camoWeaponBase.hidden = true;
+      if (camoWeaponShine) camoWeaponShine.hidden = true;
+      if (camoOnWeapon) camoOnWeapon.hidden = true;
+      if (camoWeaponStack) camoWeaponStack.classList.remove('has-camo', 'is-missing');
       camoPreviewPlaceholder.hidden = false;
+      hideCamoMissing();
       if (camoPreviewActive) camoPreviewActive.hidden = true;
       updateCamoBuyBar();
       return;
     }
 
-    camoPreviewPlaceholder.hidden = true;
     var weaponSrc = weaponThumbSrc(camoSelectedWeapon.weapon);
-    camoWeaponImg.onload = function () {
-      camoWeaponImg.hidden = false;
-      camoPreviewPlaceholder.hidden = true;
+    var loader = new Image();
+    loader.onload = function () {
+      hideCamoMissing();
+      setCamoPaintLayer(weaponSrc, camoSelectedCamo);
+      updateCamoPreviewExtras();
     };
-    camoWeaponImg.onerror = function () {
-      camoWeaponImg.hidden = true;
-      camoPreviewPlaceholder.hidden = false;
-      var hint = camoPreviewPlaceholder.querySelector('p');
-      if (hint) {
-        hint.innerHTML =
-          'PNG ontbreekt op server<br><code>assets/images/weapons/' +
-          camoSelectedWeapon.weapon +
-          '.png</code><br><small>Upload + redeploy Vercel</small>';
-      }
+    loader.onerror = function () {
+      showCamoMissing(camoSelectedWeapon.weapon);
+      updateCamoPreviewExtras();
     };
-    camoWeaponImg.src = weaponSrc;
-    camoWeaponImg.alt = camoSelectedWeapon.label;
+    loader.src = weaponSrc;
+    updateCamoBuyBar();
+  }
 
-    if (camoSkinLayer && camoSelectedCamo) {
-      var cat = getCamoCatalog();
-      var camoImg = cat.camoImage ? cat.camoImage(camoSelectedCamo.camoId) : '';
-      camoSkinLayer.hidden = false;
-      camoSkinLayer.style.background = camoSelectedCamo.css || 'transparent';
-      camoSkinLayer.style.backgroundImage = camoImg ? 'url("' + camoImg + '"), ' + (camoSelectedCamo.css || 'none') : (camoSelectedCamo.css || 'none');
-    } else if (camoSkinLayer) {
-      camoSkinLayer.hidden = true;
-    }
-
+  function updateCamoPreviewExtras() {
     if (camoPreviewActive && camoPreviewActiveImg && camoPreviewActiveName && camoSelectedCamo) {
-      camoPreviewActiveImg.src = (getCamoCatalog().camoImage && getCamoCatalog().camoImage(camoSelectedCamo.camoId)) || '';
-      camoPreviewActiveImg.onerror = function () {
-        camoPreviewActiveImg.style.background = camoSelectedCamo.css || '#333';
-      };
+      var camoImg =
+        getCamoCatalog().camoImage && getCamoCatalog().camoImage(camoSelectedCamo.camoId);
+      camoPreviewActiveImg.src = camoImg || '';
+      camoPreviewActiveImg.style.background = camoSelectedCamo.css || '#333';
       camoPreviewActiveName.textContent = camoSelectedCamo.name;
       camoPreviewActive.hidden = false;
     } else if (camoPreviewActive) {
       camoPreviewActive.hidden = true;
     }
-
-    updateCamoBuyBar();
   }
 
   function selectCamoWeapon(entry) {
@@ -491,10 +550,21 @@
     camoPreviewBox.dataset.bound = '1';
     var dragging = false;
     var lastX = 0;
+    var lastY = 0;
+
+    function onCamoDragMove(clientX, clientY) {
+      camoPreviewRotation += (clientX - lastX) * 0.55;
+      camoPreviewPitch += (clientY - lastY) * 0.25;
+      camoPreviewPitch = Math.max(-25, Math.min(25, camoPreviewPitch));
+      lastX = clientX;
+      lastY = clientY;
+      applyCamoSceneTransform();
+    }
 
     camoPreviewBox.addEventListener('mousedown', function (e) {
       dragging = true;
       lastX = e.clientX;
+      lastY = e.clientY;
       camoPreviewBox.classList.add('dragging');
     });
     window.addEventListener('mouseup', function () {
@@ -503,15 +573,37 @@
     });
     window.addEventListener('mousemove', function (e) {
       if (!dragging) return;
-      camoPreviewRotation += (e.clientX - lastX) * 0.5;
-      lastX = e.clientX;
-      applyCamoSceneTransform();
+      onCamoDragMove(e.clientX, e.clientY);
+    });
+    camoPreviewBox.addEventListener(
+      'touchstart',
+      function (e) {
+        if (!e.touches[0]) return;
+        dragging = true;
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
+        camoPreviewBox.classList.add('dragging');
+      },
+      { passive: true }
+    );
+    camoPreviewBox.addEventListener(
+      'touchmove',
+      function (e) {
+        if (!dragging || !e.touches[0]) return;
+        e.preventDefault();
+        onCamoDragMove(e.touches[0].clientX, e.touches[0].clientY);
+      },
+      { passive: false }
+    );
+    camoPreviewBox.addEventListener('touchend', function () {
+      dragging = false;
+      camoPreviewBox.classList.remove('dragging');
     });
     camoPreviewBox.addEventListener(
       'wheel',
       function (e) {
         e.preventDefault();
-        camoPreviewScale = Math.min(1.8, Math.max(0.55, camoPreviewScale + (e.deltaY < 0 ? 0.06 : -0.06)));
+        camoPreviewScale = Math.min(1.85, Math.max(0.55, camoPreviewScale + (e.deltaY < 0 ? 0.06 : -0.06)));
         applyCamoSceneTransform();
       },
       { passive: false }
