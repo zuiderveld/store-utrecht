@@ -64,7 +64,7 @@
   const camoMissingHint = document.getElementById('camoMissingHint');
   const camoPreviewPlaceholder = document.getElementById('camoPreviewPlaceholder');
   const camoPreviewActive = document.getElementById('camoPreviewActive');
-  const camoPreviewActiveImg = document.getElementById('camoPreviewActiveImg');
+  const camoPreviewActiveSwatch = document.getElementById('camoPreviewActiveSwatch');
   const camoPreviewActiveName = document.getElementById('camoPreviewActiveName');
   const camoPreviewWeapon = document.getElementById('camoPreviewWeapon');
   const camoSelectedName = document.getElementById('camoSelectedName');
@@ -81,10 +81,48 @@
   let camoSelectedWeapon = null;
   let camoSelectedCamo = null;
   let camoWeaponFilter = '';
-  let camoPreviewRotation = 24;
+  let camoPreviewRotation = 28;
   let camoPreviewScale = 1;
-  let camoPreviewTilt = -12;
-  let camoPreviewPitch = 8;
+  let camoPreviewTilt = -18;
+  let camoPreviewPitch = 14;
+
+  var CAMO_WEAPON_SVG = {
+    PISTOLEN:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140"><path fill="#b8bec8" d="M24 72h58l12-16h42l10 16h54l8 18h-20l-10 24H82l-12-24H36z"/><rect fill="#8a929e" x="126" y="56" width="32" height="14" rx="2"/></svg>',
+    SMGS:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120"><path fill="#b8bec8" d="M16 58h72l8-12h88l6 12h56l6 14H38z"/><rect fill="#8a929e" x="98" y="46" width="36" height="22" rx="3"/></svg>',
+    GEWEER:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100"><path fill="#b8bec8" d="M8 48h96l6-10h120l8 10h68l6 12H36z"/><rect fill="#8a929e" x="118" y="38" width="48" height="18" rx="2"/></svg>',
+    SHOTGUNS:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100"><path fill="#b8bec8" d="M8 52h88l4-8h132l6 8h68l4 10H32z"/><rect fill="#8a929e" x="108" y="42" width="56" height="16" rx="2"/></svg>',
+    SNIPERS:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 90"><path fill="#b8bec8" d="M4 44h104l4-8h148l6 8h62l4 10H28z"/><circle fill="#8a929e" cx="168" cy="36" r="10"/></svg>',
+    MELEE:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 200"><path fill="#b8bec8" d="M58 8l8 120H46z"/><rect fill="#8a929e" x="38" y="128" width="44" height="56" rx="6"/></svg>',
+    GOOI:
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 140"><ellipse fill="#b8bec8" cx="50" cy="88" rx="28" ry="34"/><rect fill="#8a929e" x="46" y="16" width="8" height="36" rx="2"/></svg>',
+  };
+
+  function weaponFallbackSrc(group) {
+    var svg = CAMO_WEAPON_SVG[group] || CAMO_WEAPON_SVG.PISTOLEN;
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+
+  function loadWeaponPreviewSrc(weaponEntry, done) {
+    var src = weaponThumbSrc(weaponEntry.weapon);
+    var img = new Image();
+    img.onload = function () {
+      if (img.naturalWidth < 8) {
+        done(weaponFallbackSrc(weaponEntry.group), true);
+        return;
+      }
+      done(src, false);
+    };
+    img.onerror = function () {
+      done(weaponFallbackSrc(weaponEntry.group), true);
+    };
+    img.src = src;
+  }
   const CART_KEY = 'urpStoreCart';
 
   function loadCart() {
@@ -335,8 +373,8 @@
       camoOnWeapon.style.webkitMaskPosition = 'center';
       camoOnWeapon.style.maskPosition = 'center';
       if (camoWeaponStack) camoWeaponStack.classList.add('has-camo');
-      camoWeaponBase.style.opacity = '0.45';
-      camoWeaponBase.style.filter = 'brightness(0.55) contrast(1.1)';
+      camoWeaponBase.style.opacity = '1';
+      camoWeaponBase.style.filter = '';
     } else {
       camoOnWeapon.hidden = true;
       if (camoWeaponStack) camoWeaponStack.classList.remove('has-camo');
@@ -345,16 +383,16 @@
     }
   }
 
-  function showCamoMissing(weapon) {
-    if (camoWeaponBase) camoWeaponBase.hidden = true;
-    if (camoWeaponShine) camoWeaponShine.hidden = true;
-    if (camoOnWeapon) camoOnWeapon.hidden = true;
-    if (camoWeaponStack) camoWeaponStack.classList.add('is-missing');
+  function showCamoMissing(weapon, usingFallback) {
     if (camoPreviewPlaceholder) camoPreviewPlaceholder.hidden = true;
     if (camoMissingHint) {
-      camoMissingHint.hidden = false;
-      camoMissingHint.textContent =
-        'PNG ontbreekt: assets/images/weapons/' + weapon + '.png — upload + redeploy Vercel';
+      if (usingFallback) {
+        camoMissingHint.hidden = false;
+        camoMissingHint.textContent =
+          'PNG ontbreekt: ' + weapon + '.png — voorbeeld-silhouet. Upload naar assets/images/weapons/ + redeploy.';
+      } else {
+        camoMissingHint.hidden = true;
+      }
     }
   }
 
@@ -378,34 +416,28 @@
       if (camoWeaponShine) camoWeaponShine.hidden = true;
       if (camoOnWeapon) camoOnWeapon.hidden = true;
       if (camoWeaponStack) camoWeaponStack.classList.remove('has-camo', 'is-missing');
-      camoPreviewPlaceholder.hidden = false;
+      if (camoPreviewPlaceholder) camoPreviewPlaceholder.hidden = false;
       hideCamoMissing();
       if (camoPreviewActive) camoPreviewActive.hidden = true;
       updateCamoBuyBar();
       return;
     }
 
-    var weaponSrc = weaponThumbSrc(camoSelectedWeapon.weapon);
-    var loader = new Image();
-    loader.onload = function () {
-      hideCamoMissing();
+    if (camoPreviewPlaceholder) camoPreviewPlaceholder.hidden = true;
+
+    var selectedWeaponId = camoSelectedWeapon.weapon;
+    loadWeaponPreviewSrc(camoSelectedWeapon, function (weaponSrc, isFallback) {
+      if (!camoSelectedWeapon || camoSelectedWeapon.weapon !== selectedWeaponId) return;
+      showCamoMissing(selectedWeaponId, isFallback);
       setCamoPaintLayer(weaponSrc, camoSelectedCamo);
       updateCamoPreviewExtras();
-    };
-    loader.onerror = function () {
-      showCamoMissing(camoSelectedWeapon.weapon);
-      updateCamoPreviewExtras();
-    };
-    loader.src = weaponSrc;
+    });
     updateCamoBuyBar();
   }
 
   function updateCamoPreviewExtras() {
-    if (camoPreviewActive && camoPreviewActiveImg && camoPreviewActiveName && camoSelectedCamo) {
-      var camoImg =
-        getCamoCatalog().camoImage && getCamoCatalog().camoImage(camoSelectedCamo.camoId);
-      camoPreviewActiveImg.src = camoImg || '';
-      camoPreviewActiveImg.style.background = camoSelectedCamo.css || '#333';
+    if (camoPreviewActive && camoPreviewActiveSwatch && camoPreviewActiveName && camoSelectedCamo) {
+      camoPreviewActiveSwatch.style.background = camoSelectedCamo.css || '#333';
       camoPreviewActiveName.textContent = camoSelectedCamo.name;
       camoPreviewActive.hidden = false;
     } else if (camoPreviewActive) {

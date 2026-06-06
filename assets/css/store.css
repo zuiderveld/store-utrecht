@@ -2842,15 +2842,18 @@
     flex: 1;
     min-height: 420px;
     border-radius: 18px;
-    background:
-        radial-gradient(ellipse at 50% 18%, rgba(34, 197, 94, 0.1), transparent 45%),
-        radial-gradient(circle at 50% 85%, rgba(59, 130, 246, 0.14), transparent 55%),
-        linear-gradient(180deg, #0a1018 0%, #060912 100%);
+    background: linear-gradient(180deg, #0a1018 0%, #060912 100%);
     border: 1px solid rgba(34, 197, 94, 0.15);
     overflow: hidden;
     cursor: grab;
-    perspective: 1400px;
-    perspective-origin: 50% 42%;
+    perspective: 1600px;
+    perspective-origin: 50% 38%;
+}
+
+.store-camo-scene-world {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
 }
 
 .store-camo-scene.dragging {
@@ -2859,11 +2862,11 @@
 
 .store-camo-scene-floor {
     position: absolute;
-    left: 8%;
-    right: 8%;
-    bottom: 8%;
-    height: 42%;
-    transform: rotateX(72deg);
+    left: 5%;
+    right: 5%;
+    bottom: 4%;
+    height: 48%;
+    transform: rotateX(78deg) translateZ(-120px);
     transform-origin: center bottom;
     background:
         linear-gradient(rgba(34, 197, 94, 0.08) 1px, transparent 1px),
@@ -2877,11 +2880,11 @@
 
 .store-camo-scene-glow {
     position: absolute;
-    width: 55%;
-    height: 55%;
+    width: 60%;
+    height: 60%;
     left: 50%;
-    top: 46%;
-    transform: translate(-50%, -50%);
+    top: 42%;
+    transform: translate(-50%, -50%) translateZ(-40px);
     background: radial-gradient(circle, rgba(34, 197, 94, 0.18), transparent 68%);
     pointer-events: none;
     z-index: 0;
@@ -2906,7 +2909,7 @@
     align-items: center;
     justify-content: center;
     transform-style: preserve-3d;
-    transform: rotateX(-12deg);
+    transform: rotateX(-18deg);
     transition: transform 0.08s linear;
     z-index: 2;
 }
@@ -2978,14 +2981,19 @@
 
 .store-camo-on-weapon {
     z-index: 2;
-    mix-blend-mode: normal;
+    mix-blend-mode: color;
+    opacity: 0.82;
     -webkit-mask-mode: alpha;
     mask-mode: alpha;
-    filter: saturate(1.15) contrast(1.08) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.35));
+    filter: saturate(1.2) contrast(1.05);
 }
 
 .store-camo-weapon-stack.has-camo .store-camo-on-weapon {
     animation: camoShimmer 6s linear infinite;
+}
+
+.store-camo-weapon-stack.has-camo .store-camo-weapon-base {
+    filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.55)) brightness(0.92) contrast(1.08);
 }
 
 @keyframes camoShimmer {
@@ -3015,6 +3023,15 @@
     color: #fca5a5;
     font-size: 0.68rem;
     text-align: center;
+}
+
+.store-camo-preview-placeholder[hidden],
+.store-camo-missing[hidden],
+.store-camo-preview-active[hidden],
+.store-camo-weapon-base[hidden],
+.store-camo-weapon-shine[hidden],
+.store-camo-on-weapon[hidden] {
+    display: none !important;
 }
 
 .store-camo-preview-placeholder {
@@ -3048,11 +3065,11 @@
     z-index: 5;
 }
 
-.store-camo-preview-active img {
+.store-camo-preview-active-swatch {
     width: 100%;
     height: 58px;
-    object-fit: cover;
     border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .store-camo-preview-active span {

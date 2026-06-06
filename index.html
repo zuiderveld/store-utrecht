@@ -196,15 +196,18 @@
 
                         <div class="store-camo-stage">
                             <div class="store-camo-scene" id="camoPreviewBox">
-                                <div class="store-camo-scene-floor" aria-hidden="true"></div>
-                                <div class="store-camo-scene-grid" aria-hidden="true"></div>
-                                <div class="store-camo-scene-glow" aria-hidden="true"></div>
-                                <div class="store-camo-scene-pivot" id="camoScenePivot">
-                                    <div class="store-camo-scene-inner" id="camoSceneInner">
-                                        <div class="store-camo-weapon-stack" id="camoWeaponStack">
-                                            <img id="camoWeaponBase" class="store-camo-weapon-base" alt="" hidden>
-                                            <div id="camoOnWeapon" class="store-camo-on-weapon" hidden></div>
-                                            <img id="camoWeaponShine" class="store-camo-weapon-shine" alt="" hidden>
+                                <div class="store-camo-scene-world">
+                                    <div class="store-camo-scene-floor" aria-hidden="true"></div>
+                                    <div class="store-camo-scene-grid" aria-hidden="true"></div>
+                                    <div class="store-camo-scene-glow" aria-hidden="true"></div>
+                                    <div class="store-camo-scene-pivot" id="camoScenePivot">
+                                        <div class="store-camo-scene-inner" id="camoSceneInner">
+                                            <div class="store-camo-weapon-stack" id="camoWeaponStack">
+                                                <div class="store-camo-weapon-shadow" aria-hidden="true"></div>
+                                                <img id="camoWeaponBase" class="store-camo-weapon-base" alt="" hidden>
+                                                <div id="camoOnWeapon" class="store-camo-on-weapon" hidden></div>
+                                                <img id="camoWeaponShine" class="store-camo-weapon-shine" alt="" hidden>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -214,7 +217,7 @@
                                 </div>
                                 <p class="store-camo-missing" id="camoMissingHint" hidden></p>
                                 <div class="store-camo-preview-active" id="camoPreviewActive" hidden>
-                                    <img id="camoPreviewActiveImg" alt="">
+                                    <div class="store-camo-preview-active-swatch" id="camoPreviewActiveSwatch"></div>
                                     <span id="camoPreviewActiveName"></span>
                                 </div>
                             </div>
