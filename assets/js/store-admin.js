@@ -10,6 +10,8 @@
   let snapshot = { categories: [], products: [], users: [], orders: [], camoAssets: { weapons: {}, camos: {} } };
   let selectedUserId = null;
   let userSearchQuery = '';
+  let pendingProdImageFile = null;
+  let clearProductImageFlag = false;
 
   function showToast(msg) {
     toast.textContent = msg;
@@ -88,6 +90,67 @@
     return true;
   }
 
+  function readFileAsBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var result = String(reader.result || '');
+        var comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = function () {
+        reject(new Error('Bestand lezen mislukt: ' + file.name));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function productImagePreviewSrc(imageUrl, productId) {
+    if (imageUrl) {
+      if (imageUrl.indexOf('/api/store-asset') === 0) {
+        return imageUrl + (imageUrl.indexOf('?') >= 0 ? '&' : '?') + 'preview=1';
+      }
+      return imageUrl;
+    }
+    if (productId) {
+      return '/api/store-asset?type=product&id=' + encodeURIComponent(productId) + '&preview=1';
+    }
+    return '';
+  }
+
+  function updateProdImagePreview(imageUrl, productId) {
+    var wrap = document.getElementById('prodImagePreviewWrap');
+    var img = document.getElementById('prodImagePreview');
+    var label = document.getElementById('prodImageDropLabel');
+    var zone = document.getElementById('prodImageDropZone');
+    var hidden = document.getElementById('prodImage');
+    var src = productImagePreviewSrc(imageUrl, productId);
+
+    if (hidden) hidden.value = imageUrl || '';
+
+    if (img && wrap) {
+      if (src && !clearProductImageFlag) {
+        img.src = src;
+        wrap.hidden = false;
+        if (zone) zone.classList.add('has-file');
+        if (label) label.textContent = 'Andere afbeelding kiezen? Sleep of klik hier';
+      } else {
+        img.removeAttribute('src');
+        wrap.hidden = true;
+        if (zone) zone.classList.remove('has-file');
+        if (label) label.textContent = 'Klik of sleep afbeelding van je PC';
+      }
+    }
+  }
+
+  function resetProductImageField() {
+    pendingProdImageFile = null;
+    clearProductImageFlag = false;
+    var input = document.getElementById('prodImageFile');
+    if (input) input.value = '';
+    updateProdImagePreview('', null);
+  }
+
   function resetCategoryForm() {
     document.getElementById('catId').value = '';
     document.getElementById('catName').value = '';
@@ -100,7 +163,7 @@
     document.getElementById('prodDesc').value = '';
     document.getElementById('prodPrice').value = '';
     document.getElementById('prodOriginalPrice').value = '';
-    document.getElementById('prodImage').value = '';
+    resetProductImageField();
     document.getElementById('prodModel').value = '';
     document.getElementById('prodOxItem').value = '';
     document.getElementById('prodItemCount').value = '';
@@ -465,10 +528,68 @@
     return s.toLowerCase();
   }
 
+  function pickProductImageFile(file) {
+    if (!file) return;
+    if (!/^image\//i.test(file.type) && !/\.(png|jpe?g|webp|gif)$/i.test(file.name)) {
+      showToast('Kies een afbeelding (PNG, JPG, WEBP of GIF)');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      showToast('Max 4 MB per afbeelding');
+      return;
+    }
+    pendingProdImageFile = file;
+    clearProductImageFlag = false;
+    var img = document.getElementById('prodImagePreview');
+    var wrap = document.getElementById('prodImagePreviewWrap');
+    var label = document.getElementById('prodImageDropLabel');
+    var zone = document.getElementById('prodImageDropZone');
+    if (img && wrap) {
+      img.src = URL.createObjectURL(file);
+      wrap.hidden = false;
+    }
+    if (zone) zone.classList.add('has-file');
+    if (label) label.textContent = file.name + ' — klaar om op te slaan';
+  }
+
+  var prodImageFile = document.getElementById('prodImageFile');
+  var prodImageDropZone = document.getElementById('prodImageDropZone');
+  var btnClearProdImage = document.getElementById('btnClearProdImage');
+
+  if (prodImageFile) {
+    prodImageFile.addEventListener('change', function () {
+      pickProductImageFile(prodImageFile.files && prodImageFile.files[0]);
+    });
+  }
+
+  if (prodImageDropZone) {
+    prodImageDropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      prodImageDropZone.classList.add('dragover');
+    });
+    prodImageDropZone.addEventListener('dragleave', function () {
+      prodImageDropZone.classList.remove('dragover');
+    });
+    prodImageDropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      prodImageDropZone.classList.remove('dragover');
+      pickProductImageFile(e.dataTransfer.files && e.dataTransfer.files[0]);
+    });
+  }
+
+  if (btnClearProdImage) {
+    btnClearProdImage.onclick = function () {
+      pendingProdImageFile = null;
+      clearProductImageFlag = true;
+      if (prodImageFile) prodImageFile.value = '';
+      updateProdImagePreview('', null);
+    };
+  }
+
   document.getElementById('formProduct').onsubmit = async function (e) {
     e.preventDefault();
     try {
-      await adminApi({
+      var payload = {
         action: 'product-save',
         id: document.getElementById('prodId').value || undefined,
         categoryId: document.getElementById('prodCat').value,
@@ -476,7 +597,6 @@
         description: document.getElementById('prodDesc').value,
         price: document.getElementById('prodPrice').value,
         originalPrice: document.getElementById('prodOriginalPrice').value || null,
-        image: document.getElementById('prodImage').value.trim(),
         type: document.getElementById('prodType').value,
         active: document.getElementById('prodActive').checked,
         meta: {
@@ -499,7 +619,16 @@
           tint: document.getElementById('prodCamoTint').value.trim(),
           oxItem: document.getElementById('prodCamoOxItem').value.trim().toLowerCase() || 'weapon_camo',
         },
-      });
+      };
+
+      if (pendingProdImageFile) {
+        payload.imageBase64 = await readFileAsBase64(pendingProdImageFile);
+        payload.imageFileName = pendingProdImageFile.name;
+      } else if (clearProductImageFlag) {
+        payload.clearImage = true;
+      }
+
+      await adminApi(payload);
       showToast('Product opgeslagen');
       resetProductForm();
       await loadSnapshot();
@@ -640,7 +769,11 @@
       document.getElementById('prodType').value = p.type;
       document.getElementById('prodPrice').value = p.price;
       document.getElementById('prodOriginalPrice').value = p.originalPrice || '';
-      document.getElementById('prodImage').value = p.image || '';
+      pendingProdImageFile = null;
+      clearProductImageFlag = false;
+      var prodImageInput = document.getElementById('prodImageFile');
+      if (prodImageInput) prodImageInput.value = '';
+      updateProdImagePreview(p.image || '', p.id);
       document.getElementById('prodDesc').value = p.description || '';
       document.getElementById('prodModel').value = p.meta?.model || '';
       document.getElementById('prodOxItem').value = p.meta?.item || '';
@@ -1044,22 +1177,7 @@
     zone.classList.toggle('has-file', Boolean(text && text.indexOf('Klik') !== 0));
   }
 
-  function readFileAsBase64(file) {
-    return new Promise(function (resolve, reject) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        var result = String(reader.result || '');
-        var comma = result.indexOf(',');
-        resolve(comma >= 0 ? result.slice(comma + 1) : result);
-      };
-      reader.onerror = function () {
-        reject(new Error('Bestand lezen mislukt: ' + file.name));
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
-  async function uploadCamoWeaponFiles(files) {
+  function setCamoWeaponDropLabel(text) {
     var list = Array.from(files || []).filter(function (f) {
       return f && /\.png$/i.test(f.name);
     });

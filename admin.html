@@ -136,7 +136,21 @@
                     </label>
                     <label id="prodPriceWrap"><span id="prodPriceLabel">Prijs (coins)</span> <input name="price" id="prodPrice" type="number" min="0" required></label>
                     <label id="prodOriginalPriceWrap"><span id="prodOriginalPriceLabel">Oude prijs</span> <input name="originalPrice" id="prodOriginalPrice" type="number" min="0" placeholder="Korting badge"></label>
-                    <label class="span-2">Afbeelding URL <input name="image" id="prodImage" type="url" placeholder="https://…"></label>
+                    <label class="span-2">Productafbeelding
+                        <div class="admin-product-image-field">
+                            <label class="admin-backup-drop admin-product-image-drop" id="prodImageDropZone" for="prodImageFile">
+                                <input type="file" id="prodImageFile" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif" hidden>
+                                <span class="admin-backup-drop-icon" aria-hidden="true">🖼</span>
+                                <span class="admin-backup-drop-title" id="prodImageDropLabel">Klik of sleep afbeelding van je PC</span>
+                                <span class="admin-backup-drop-hint">PNG, JPG, WEBP of GIF · max 4 MB · geen URL nodig</span>
+                            </label>
+                            <div class="admin-product-image-preview-wrap" id="prodImagePreviewWrap" hidden>
+                                <img id="prodImagePreview" alt="" class="admin-product-image-preview">
+                                <button type="button" class="btn-sm btn-sm-del" id="btnClearProdImage">Afbeelding verwijderen</button>
+                            </div>
+                            <input type="hidden" name="image" id="prodImage" value="">
+                        </div>
+                    </label>
                     <label class="span-2">Beschrijving <textarea name="description" id="prodDesc" rows="3"></textarea></label>
                     <div class="admin-form-section span-2" id="prodSectionVehicle">
                         <span>Voertuig (type vehicle)</span>

@@ -7,7 +7,10 @@ const { logStoreAdminAction } = require('../store/discord-webhooks');
 const {
   uploadWeaponImage,
   deleteWeaponImage,
+  uploadProductImage,
+  deleteProductImage,
   publicCamoAssets,
+  detectContentType,
   weaponIdFromFilename,
 } = require('../store/camo-assets');
 
@@ -184,9 +187,39 @@ module.exports = async function handler(req, res) {
           break;
         }
         case 'product-save': {
-          const { id, categoryId, name, description, price, originalPrice, type, active, image, meta } = body;
+          const {
+            id,
+            categoryId,
+            name,
+            description,
+            price,
+            originalPrice,
+            type,
+            active,
+            image,
+            meta,
+            imageBase64,
+            imageFileName,
+            clearImage,
+          } = body;
           if (!name || !categoryId) throw new Error('Naam en categorie verplicht');
           const pid = id || 'prod_' + crypto.randomBytes(6).toString('hex');
+          const idx = state.products.findIndex((p) => p.id === pid);
+          const existing = idx >= 0 ? state.products[idx] : null;
+          let imageUrl = String(image || '').trim();
+
+          if (imageBase64) {
+            const buffer = Buffer.from(String(imageBase64), 'base64');
+            const contentType = detectContentType(buffer, imageFileName || '');
+            const uploaded = await uploadProductImage(state, pid, buffer, contentType, imageFileName || '');
+            imageUrl = uploaded.url;
+          } else if (clearImage) {
+            await deleteProductImage(state, pid);
+            imageUrl = '';
+          } else if (existing && !imageUrl) {
+            imageUrl = existing.image || '';
+          }
+
           const row = {
             id: pid,
             categoryId,
@@ -196,10 +229,9 @@ module.exports = async function handler(req, res) {
             originalPrice: originalPrice ? Number(originalPrice) : null,
             type: type || 'item',
             active: active !== false,
-            image: image || '',
+            image: imageUrl,
             meta: meta || {},
           };
-          const idx = state.products.findIndex((p) => p.id === pid);
           if (idx >= 0) state.products[idx] = { ...state.products[idx], ...row };
           else state.products.push(row);
           if (row.type === 'vehicle' && !row.meta?.model) {
@@ -251,7 +283,9 @@ module.exports = async function handler(req, res) {
           break;
         }
         case 'product-delete': {
-          state.products = state.products.filter((p) => p.id !== body.id);
+          const productId = body.id;
+          if (productId) await deleteProductImage(state, productId);
+          state.products = state.products.filter((p) => p.id !== productId);
           break;
         }
         case 'coins-set':

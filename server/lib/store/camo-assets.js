@@ -3,6 +3,49 @@ const { blobAccess } = require('./blob-store');
 
 const WEAPON_PREFIX = 'store/camo/weapons/';
 const CAMO_PREFIX = 'store/camo/camos/';
+const PRODUCT_PREFIX = 'store/products/';
+
+function detectContentType(buffer, fileName) {
+  if (buffer[0] === 0x89 && buffer[1] === 0x50) return 'image/png';
+  if (buffer[0] === 0xff && buffer[1] === 0xd8) return 'image/jpeg';
+  if (buffer[0] === 0x47 && buffer[1] === 0x49) return 'image/gif';
+  if (buffer.length > 12 && buffer.slice(0, 4).toString('ascii') === 'RIFF') return 'image/webp';
+  const name = String(fileName || '').toLowerCase();
+  if (/\.jpe?g$/.test(name)) return 'image/jpeg';
+  if (/\.webp$/.test(name)) return 'image/webp';
+  if (/\.gif$/.test(name)) return 'image/gif';
+  return 'image/png';
+}
+
+function extensionForContentType(contentType) {
+  if (contentType === 'image/jpeg') return 'jpg';
+  if (contentType === 'image/webp') return 'webp';
+  if (contentType === 'image/gif') return 'gif';
+  return 'png';
+}
+
+function normalizeProductId(raw) {
+  const id = String(raw || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!id) throw new Error('Ongeldig product-ID');
+  return id;
+}
+
+function productBlobPath(productId, contentType) {
+  return PRODUCT_PREFIX + normalizeProductId(productId) + '.' + extensionForContentType(contentType);
+}
+
+function productAssetApiPath(productId) {
+  return '/api/store-asset?type=product&id=' + encodeURIComponent(normalizeProductId(productId));
+}
+
+function ensureProductImages(state) {
+  if (!state.productImages || typeof state.productImages !== 'object') {
+    state.productImages = {};
+  }
+  return state.productImages;
+}
 
 function normalizeWeaponId(raw) {
   const id = String(raw || '')
@@ -64,7 +107,7 @@ async function putImageBlob(path, buffer, contentType) {
 async function readAssetEntry(entry) {
   if (!entry) return null;
   if (entry.inline) {
-    return Buffer.from(entry.inline, 'base64');
+    return { buffer: Buffer.from(entry.inline, 'base64'), contentType: entry.contentType || 'image/png' };
   }
   if (!entry.path || !process.env.BLOB_READ_WRITE_TOKEN) return null;
   try {
@@ -73,7 +116,8 @@ async function readAssetEntry(entry) {
       useCache: false,
     });
     if (!result?.stream) return null;
-    return streamToBuffer(result.stream);
+    const buffer = await streamToBuffer(result.stream);
+    return { buffer, contentType: entry.contentType || result.contentType || 'image/png' };
   } catch {
     return null;
   }
@@ -132,6 +176,48 @@ async function deleteWeaponImage(state, weaponRaw) {
   return { weaponId, deleted: true };
 }
 
+async function uploadProductImage(state, productRaw, buffer, contentType, fileName) {
+  if (!Buffer.isBuffer(buffer) || !buffer.length) throw new Error('Leeg bestand');
+  if (buffer.length > 4 * 1024 * 1024) throw new Error('Max 4 MB per afbeelding');
+
+  const productId = normalizeProductId(productRaw);
+  const type = contentType || detectContentType(buffer, fileName);
+  const images = ensureProductImages(state);
+  const stored = await putImageBlob(productBlobPath(productId, type), buffer, type);
+
+  images[productId] = {
+    path: stored.path,
+    inline: stored.inline || null,
+    contentType: type,
+    updatedAt: Date.now(),
+    size: buffer.length,
+  };
+
+  return { productId, entry: images[productId], url: productAssetApiPath(productId) };
+}
+
+async function deleteProductImage(state, productRaw) {
+  const productId = normalizeProductId(productRaw);
+  const images = ensureProductImages(state);
+  const entry = images[productId];
+  if (!entry) return { productId, deleted: false };
+
+  if (entry.path && process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      await del(entry.path, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    } catch {
+      /* negeer */
+    }
+  }
+  delete images[productId];
+  return { productId, deleted: true };
+}
+
+function hasProductAsset(state, productId) {
+  const images = state.productImages;
+  return Boolean(images && images[normalizeProductId(productId)]);
+}
+
 function publicCamoAssets(state) {
   const assets = ensureCamoAssets(state);
   const weapons = {};
@@ -167,13 +253,20 @@ function weaponIdFromFilename(name) {
 module.exports = {
   normalizeWeaponId,
   normalizeCamoId,
+  normalizeProductId,
   ensureCamoAssets,
+  ensureProductImages,
   uploadWeaponImage,
   uploadCamoImage,
+  uploadProductImage,
   deleteWeaponImage,
+  deleteProductImage,
   readAssetEntry,
   publicCamoAssets,
   hasWeaponAsset,
   hasCamoAsset,
+  hasProductAsset,
   weaponIdFromFilename,
+  productAssetApiPath,
+  detectContentType,
 };
