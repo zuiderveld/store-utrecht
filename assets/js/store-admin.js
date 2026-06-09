@@ -80,6 +80,29 @@
     updateAdminHeader();
   }
 
+  async function bootstrapAdminData() {
+    try {
+      await loadSnapshot();
+      await loadMaintenance();
+      await loadBackupStatus();
+      syncProductTypeFields();
+    } catch (err) {
+      showToast(err.message || 'Admin data laden mislukt');
+    }
+  }
+
+  document.addEventListener('urp-admin-logged-in', function () {
+    openAdminApp();
+    bootstrapAdminData().then(function () {
+      showToast('Ingelogd via Discord');
+    });
+  });
+
+  document.addEventListener('urp-admin-login-failed', function (e) {
+    showGate(true);
+    if (e.detail && e.detail.error) showToast(e.detail.error);
+  });
+
   async function requireAdminPage() {
     if (!(await verifyAdminSession())) {
       showGate(true);
@@ -1064,10 +1087,7 @@
         );
         document.getElementById('adminPass').value = '';
         openAdminApp();
-        await loadSnapshot();
-        await loadMaintenance();
-        await loadBackupStatus();
-        syncProductTypeFields();
+        await bootstrapAdminData();
         showToast('Ingelogd als beheerder');
       } catch (err) {
         setGateHint(err.message || 'Inloggen mislukt');
@@ -1177,7 +1197,7 @@
     zone.classList.toggle('has-file', Boolean(text && text.indexOf('Klik') !== 0));
   }
 
-  function setCamoWeaponDropLabel(text) {
+  async function uploadCamoWeaponFiles(files) {
     var list = Array.from(files || []).filter(function (f) {
       return f && /\.png$/i.test(f.name);
     });
@@ -1270,31 +1290,20 @@
   }
 
   (async function init() {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-
-    if (code) {
-      setGateHint('Discord login verwerken…');
-      window.history.replaceState({}, '', '/admin.html');
-      try {
-        await adminDiscordLoginWithCode(code);
-        openAdminApp();
-        await loadSnapshot();
-        await loadMaintenance();
-        await loadBackupStatus();
-        syncProductTypeFields();
-        showToast('Ingelogd via Discord');
-        return;
-      } catch (err) {
-        var hint = err.message || 'Discord login mislukt';
-        if (err.details && err.details.discordId) {
-          hint +=
-            ' — rol Store Beheer (1502448726676078704) op server 1416816652644909109 nodig.';
-        }
-        setGateHint(hint);
-        showToast(hint);
-        showGate(true);
+    if (window.__urpAdminOAuthBusy) {
+      var waitAttempts = 0;
+      while (window.__urpAdminOAuthBusy && waitAttempts < 50) {
+        await new Promise(function (r) {
+          setTimeout(r, 100);
+        });
+        waitAttempts += 1;
       }
+    }
+
+    if (isAdminLoggedIn() && (await verifyAdminSession())) {
+      openAdminApp();
+      await bootstrapAdminData();
+      return;
     }
 
     try {
@@ -1327,19 +1336,14 @@
       /* config optioneel */
     }
 
-    if (!(await requireAdminPage())) {
-      showGate(true);
+    if (isAdminLoggedIn() && (await verifyAdminSession())) {
+      openAdminApp();
+      await bootstrapAdminData();
       return;
     }
 
-    try {
-      await loadSnapshot();
-      await loadMaintenance();
-      await loadBackupStatus();
-      syncProductTypeFields();
-    } catch (e) {
-      showToast(e.message);
-      if (!(await requireAdminPage())) return;
+    if (!window.__urpAdminOAuthBusy && !isAdminLoggedIn()) {
+      showGate(true);
     }
   })();
 })();

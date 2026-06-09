@@ -138,3 +138,86 @@ function adminLogout() {
   clearAdminSession();
   window.location.replace('/admin.html');
 }
+
+function openAdminShellUi() {
+  var gate = document.getElementById('adminGate');
+  var app = document.getElementById('adminApp');
+  var hint = document.getElementById('adminGateHint');
+  var session = document.getElementById('adminSession');
+  var logout = document.getElementById('btnLogout');
+  var nameEl = document.getElementById('adminUserName');
+  var avatar = document.getElementById('adminAvatar');
+
+  if (hint) {
+    hint.classList.add('hidden');
+    hint.textContent = '';
+  }
+  if (gate) gate.classList.add('hidden');
+  if (app) app.classList.remove('hidden');
+  if (session) session.classList.remove('hidden');
+  if (logout) logout.classList.remove('hidden');
+  if (nameEl) nameEl.textContent = adminUserName();
+
+  var avatarUrl = sessionStorage.getItem('urpAdminAvatarUrl');
+  if (avatar) {
+    if (avatarUrl) {
+      avatar.src = avatarUrl;
+      avatar.style.display = 'block';
+    } else {
+      avatar.style.display = 'none';
+    }
+  }
+}
+
+function setAdminGateHint(text) {
+  var hint = document.getElementById('adminGateHint');
+  if (!hint) return;
+  if (!text) {
+    hint.classList.add('hidden');
+    hint.textContent = '';
+    return;
+  }
+  hint.classList.remove('hidden');
+  hint.textContent = text;
+}
+
+function cleanAdminOAuthUrl() {
+  var url = new URL(window.location.href);
+  url.searchParams.delete('code');
+  url.searchParams.delete('state');
+  var next = url.pathname + (url.search || '') + (url.hash || '');
+  window.history.replaceState({}, '', next || '/admin.html');
+}
+
+async function handleAdminDiscordOAuthReturn() {
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get('code');
+  if (!code) return false;
+
+  window.__urpAdminOAuthBusy = true;
+  setAdminGateHint('Discord login verwerken…');
+  cleanAdminOAuthUrl();
+
+  try {
+    await adminDiscordLoginWithCode(code);
+    openAdminShellUi();
+    window.__urpAdminNeedsBootstrap = true;
+    document.dispatchEvent(new CustomEvent('urp-admin-logged-in', { detail: { method: 'discord' } }));
+    return true;
+  } catch (err) {
+    var hint = err.message || 'Discord login mislukt';
+    if (err.details && err.details.discordId) {
+      hint += ' — rol Store Beheer op Discord nodig.';
+    }
+    setAdminGateHint(hint);
+    document.dispatchEvent(new CustomEvent('urp-admin-login-failed', { detail: { error: hint } }));
+    return false;
+  } finally {
+    window.__urpAdminOAuthBusy = false;
+  }
+}
+
+(async function bootstrapAdminOAuth() {
+  if (!window.location.pathname.includes('admin')) return;
+  await handleAdminDiscordOAuthReturn();
+})();

@@ -69,6 +69,7 @@ function normalizeState(raw) {
         : { weapons: {}, camos: {} },
     productImages:
       raw.productImages && typeof raw.productImages === 'object' ? raw.productImages : {},
+    adminSessions: raw.adminSessions || {},
   };
 }
 
