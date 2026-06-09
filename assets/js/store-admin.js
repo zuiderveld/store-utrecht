@@ -7,7 +7,7 @@
   const adminLoginForm = document.getElementById('adminLoginForm');
   const productFormTitle = document.getElementById('productFormTitle');
 
-  let snapshot = { categories: [], products: [], users: [], orders: [] };
+  let snapshot = { categories: [], products: [], users: [], orders: [], camoAssets: { weapons: {}, camos: {} } };
   let selectedUserId = null;
   let userSearchQuery = '';
 
@@ -284,12 +284,16 @@
         renderBackupLiveStats();
         loadBackupStatus();
       }
+      if (btn.dataset.tab === 'camoassets') {
+        renderCamoWeaponAssets();
+      }
     };
   });
 
   function renderAll() {
     renderStats();
     renderBackupLiveStats();
+    renderCamoWeaponAssets();
 
     const catTable = document.getElementById('catTable');
     catTable.innerHTML = snapshot.categories.length
@@ -945,6 +949,207 @@
   btnLogout.onclick = function () {
     adminLogout();
   };
+
+  var pendingCamoWeaponFiles = [];
+
+  function getCamoCatalogWeapons() {
+    return (window.URP_CAMO_CATALOG && window.URP_CAMO_CATALOG.weapons) || [];
+  }
+
+  function weaponAssetUploaded(weaponId) {
+    return Boolean(
+      snapshot.camoAssets &&
+        snapshot.camoAssets.weapons &&
+        snapshot.camoAssets.weapons[String(weaponId || '').toUpperCase()]
+    );
+  }
+
+  function weaponAssetPreviewUrl(weaponId) {
+    if (!weaponAssetUploaded(weaponId)) return '';
+    var entry = snapshot.camoAssets.weapons[String(weaponId).toUpperCase()];
+    return '/api/store-asset?type=weapon&id=' + encodeURIComponent(weaponId) + '&v=' + (entry.updatedAt || '');
+  }
+
+  function renderCamoWeaponAssets() {
+    var table = document.getElementById('camoWeaponAssetTable');
+    var uploadedEl = document.getElementById('camoWeaponStatUploaded');
+    var uploadedSub = document.getElementById('camoWeaponStatUploadedSub');
+    var missingEl = document.getElementById('camoWeaponStatMissing');
+    var missingSub = document.getElementById('camoWeaponStatMissingSub');
+    if (!table) return;
+
+    var weapons = getCamoCatalogWeapons().slice().sort(function (a, b) {
+      return a.label.localeCompare(b.label, 'nl');
+    });
+    var uploadedCount = 0;
+
+    table.innerHTML = weapons.length
+      ? weapons
+          .map(function (w) {
+            var ok = weaponAssetUploaded(w.weapon);
+            if (ok) uploadedCount += 1;
+            var preview = ok
+              ? '<img src="' + esc(weaponAssetPreviewUrl(w.weapon)) + '" alt="" style="width:48px;height:32px;object-fit:contain;background:#111;border-radius:6px">'
+              : '—';
+            return (
+              '<tr><td><strong>' +
+              esc(w.label) +
+              '</strong><br><span class="mono">' +
+              esc(w.weapon) +
+              '</span></td><td class="mono">' +
+              esc(w.weapon + '.png') +
+              '</td><td>' +
+              (ok
+                ? '<span class="admin-status done">Geüpload</span>'
+                : '<span class="admin-status failed">Ontbreekt</span>') +
+              ' ' +
+              preview +
+              '</td><td><div class="admin-table-actions">' +
+              (ok
+                ? '<button type="button" class="btn-sm btn-sm-del" data-del-camo-weapon="' +
+                  esc(w.weapon) +
+                  '">Verwijder</button>'
+                : '') +
+              '</div></td></tr>'
+            );
+          })
+          .join('')
+      : emptyRow(4, 'Geen wapens in camo-catalog.js');
+
+    if (uploadedEl) uploadedEl.textContent = String(uploadedCount);
+    if (uploadedSub) uploadedSub.textContent = 'van ' + weapons.length + ' wapens';
+    if (missingEl) missingEl.textContent = String(Math.max(0, weapons.length - uploadedCount));
+    if (missingSub) missingSub.textContent = 'upload via bestand hierboven';
+
+    table.querySelectorAll('[data-del-camo-weapon]').forEach(function (btn) {
+      btn.onclick = async function () {
+        if (!confirm('PNG verwijderen voor ' + btn.dataset.delCamoWeapon + '?')) return;
+        try {
+          var data = await adminApi({ action: 'camo-weapon-delete', weapon: btn.dataset.delCamoWeapon });
+          snapshot.camoAssets = data.camoAssets || snapshot.camoAssets;
+          renderCamoWeaponAssets();
+          showToast('PNG verwijderd');
+        } catch (err) {
+          showToast(err.message);
+        }
+      };
+    });
+  }
+
+  function setCamoWeaponDropLabel(text) {
+    var label = document.getElementById('camoWeaponDropLabel');
+    var zone = document.getElementById('camoWeaponDropZone');
+    if (!label || !zone) return;
+    label.textContent = text || "Klik of sleep wapen PNG's van je PC";
+    zone.classList.toggle('has-file', Boolean(text && text.indexOf('Klik') !== 0));
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var result = String(reader.result || '');
+        var comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = function () {
+        reject(new Error('Bestand lezen mislukt: ' + file.name));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadCamoWeaponFiles(files) {
+    var list = Array.from(files || []).filter(function (f) {
+      return f && /\.png$/i.test(f.name);
+    });
+    if (!list.length) {
+      showToast('Geen PNG-bestanden geselecteerd');
+      return;
+    }
+
+    var status = document.getElementById('camoWeaponUploadStatus');
+    var btn = document.getElementById('btnCamoWeaponUpload');
+    if (status) status.textContent = 'Bezig met uploaden…';
+    if (btn) btn.disabled = true;
+
+    try {
+      var payloadFiles = [];
+      for (var i = 0; i < list.length; i++) {
+        payloadFiles.push({
+          name: list[i].name,
+          imageBase64: await readFileAsBase64(list[i]),
+        });
+      }
+
+      var data = await adminApi({ action: 'camo-weapons-bulk-upload', files: payloadFiles });
+      snapshot.camoAssets = data.camoAssets || snapshot.camoAssets;
+      renderCamoWeaponAssets();
+
+      var msg = (data.uploaded || []).length + ' geüpload';
+      if (data.skipped && data.skipped.length) msg += ', ' + data.skipped.length + ' overgeslagen';
+      showToast(msg);
+      if (status) status.textContent = msg;
+      setCamoWeaponDropLabel('');
+      pendingCamoWeaponFiles = [];
+      var input = document.getElementById('camoWeaponFileInput');
+      if (input) input.value = '';
+    } catch (err) {
+      showToast(err.message || 'Upload mislukt');
+      if (status) status.textContent = '';
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  var camoWeaponFileInput = document.getElementById('camoWeaponFileInput');
+  var camoWeaponDropZone = document.getElementById('camoWeaponDropZone');
+  var btnCamoWeaponUpload = document.getElementById('btnCamoWeaponUpload');
+
+  if (camoWeaponFileInput) {
+    camoWeaponFileInput.addEventListener('change', function () {
+      pendingCamoWeaponFiles = Array.from(camoWeaponFileInput.files || []);
+      setCamoWeaponDropLabel(
+        pendingCamoWeaponFiles.length
+          ? pendingCamoWeaponFiles.length + ' bestand(en) geselecteerd'
+          : ''
+      );
+    });
+  }
+
+  if (camoWeaponDropZone) {
+    camoWeaponDropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      camoWeaponDropZone.classList.add('dragover');
+    });
+    camoWeaponDropZone.addEventListener('dragleave', function () {
+      camoWeaponDropZone.classList.remove('dragover');
+    });
+    camoWeaponDropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      camoWeaponDropZone.classList.remove('dragover');
+      pendingCamoWeaponFiles = Array.from(e.dataTransfer.files || []).filter(function (f) {
+        return /\.png$/i.test(f.name);
+      });
+      setCamoWeaponDropLabel(
+        pendingCamoWeaponFiles.length
+          ? pendingCamoWeaponFiles.length + ' bestand(en) klaar om te uploaden'
+          : 'Geen PNG-bestanden gevonden'
+      );
+    });
+  }
+
+  if (btnCamoWeaponUpload) {
+    btnCamoWeaponUpload.onclick = function () {
+      var files =
+        pendingCamoWeaponFiles.length > 0
+          ? pendingCamoWeaponFiles
+          : camoWeaponFileInput && camoWeaponFileInput.files
+            ? Array.from(camoWeaponFileInput.files)
+            : [];
+      uploadCamoWeaponFiles(files);
+    };
+  }
 
   (async function init() {
     const params = new URLSearchParams(window.location.search);

@@ -12,6 +12,7 @@
     { "source": "/api/store-admin-auth", "destination": "/api/router?route=store-admin-auth" },
     { "source": "/api/store-email-auth", "destination": "/api/router?route=store-email-auth" },
     { "source": "/api/store-bridge", "destination": "/api/router?route=store-bridge" },
-    { "source": "/api/maintenance", "destination": "/api/router?route=store-maintenance" }
+    { "source": "/api/maintenance", "destination": "/api/router?route=store-maintenance" },
+    { "source": "/api/store-asset", "destination": "/api/router?route=store-asset" }
   ]
 }

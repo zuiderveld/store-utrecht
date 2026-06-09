@@ -83,6 +83,7 @@
         <button type="button" data-tab="coins"><span>🪙</span> Coins</button>
         <button type="button" data-tab="orders"><span>🧾</span> Orders</button>
         <button type="button" data-tab="backup"><span>💾</span> Backup</button>
+        <button type="button" data-tab="camoassets"><span>🎨</span> Camo PNG&apos;s</button>
         <button type="button" data-tab="maintenance"><span>🛠️</span> Onderhoud</button>
     </div>
 
@@ -374,6 +375,59 @@
         </div>
     </div>
 
+    <div id="panel-camoassets" class="admin-panel">
+        <div class="admin-backup-shell">
+            <header class="admin-backup-hero">
+                <div class="admin-backup-hero-copy">
+                    <span class="admin-backup-eyebrow">Camo editor</span>
+                    <h3>Wapen PNG&apos;s vanaf je PC</h3>
+                    <p>Sleep PNG-bestanden van je computer. Geen URL&apos;s of handmatige map-upload op Vercel — bestanden worden opgeslagen in de store database.</p>
+                    <span class="admin-backup-badge">Bestandsnaam: WEAPON_GLOCK17.png</span>
+                </div>
+            </header>
+
+            <label class="admin-backup-drop" id="camoWeaponDropZone" for="camoWeaponFileInput">
+                <input type="file" id="camoWeaponFileInput" accept="image/png,.png" multiple hidden>
+                <span class="admin-backup-drop-icon" aria-hidden="true">📂</span>
+                <span class="admin-backup-drop-title" id="camoWeaponDropLabel">Klik of sleep wapen PNG&apos;s van je PC</span>
+                <span class="admin-backup-drop-hint">Meerdere bestanden tegelijk · max 3 MB per PNG</span>
+            </label>
+
+            <div class="admin-backup-actions" style="margin-top:1rem">
+                <button type="button" class="btn-main" id="btnCamoWeaponUpload">Upload geselecteerde bestanden</button>
+                <span class="admin-hint" id="camoWeaponUploadStatus"></span>
+            </div>
+
+            <div class="admin-backup-stats" style="margin-top:1.25rem">
+                <article class="admin-backup-stat">
+                    <div class="admin-backup-stat-icon live" aria-hidden="true">🔫</div>
+                    <div class="admin-backup-stat-body">
+                        <span class="admin-backup-stat-label">Geüpload</span>
+                        <strong id="camoWeaponStatUploaded">—</strong>
+                        <small id="camoWeaponStatUploadedSub">van catalogus</small>
+                    </div>
+                </article>
+                <article class="admin-backup-stat admin-backup-stat-accent">
+                    <div class="admin-backup-stat-icon cloud" aria-hidden="true">⏳</div>
+                    <div class="admin-backup-stat-body">
+                        <span class="admin-backup-stat-label">Nog nodig</span>
+                        <strong id="camoWeaponStatMissing">—</strong>
+                        <small id="camoWeaponStatMissingSub">ontbrekende PNG&apos;s</small>
+                    </div>
+                </article>
+            </div>
+
+            <div class="admin-table-wrap" style="margin-top:1.25rem">
+                <table class="admin-table">
+                    <thead>
+                        <tr><th>Wapen</th><th>Bestand</th><th>Status</th><th></th></tr>
+                    </thead>
+                    <tbody id="camoWeaponAssetTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div id="panel-maintenance" class="admin-panel">
         <div class="admin-card">
             <div class="admin-card-head"><h3>Store onderhoud</h3></div>
@@ -401,6 +455,7 @@
 <div class="store-toast" id="toast"></div>
 
 <script src="js/store-config.js"></script>
+<script src="assets/js/camo-catalog.js"></script>
 <script src="assets/js/admin-auth.js"></script>
 <script src="assets/js/store-admin.js"></script>
 </body>

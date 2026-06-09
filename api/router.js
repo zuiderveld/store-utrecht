@@ -15,6 +15,7 @@ const routes = {
   'store-email-auth': require('../server/lib/routes/store-email-auth'),
   'store-bridge': require('../server/lib/routes/store-bridge'),
   'store-maintenance': require('../server/lib/routes/store-maintenance'),
+  'store-asset': require('../server/lib/routes/store-asset'),
 };
 
 module.exports = async function handler(req, res) {

@@ -74,7 +74,14 @@
   const camoUserName = document.getElementById('camoUserName');
   const camoCoinBalance = document.getElementById('camoCoinBalance');
 
-  let catalog = { categories: [], products: [], me: null, recentPurchases: [], topBuyer: null };
+  let catalog = {
+    categories: [],
+    products: [],
+    me: null,
+    recentPurchases: [],
+    topBuyer: null,
+    camoAssets: { weapons: {}, camos: {} },
+  };
   let activeCat = 'all';
   let searchQuery = '';
   let cart = [];
@@ -256,10 +263,48 @@
     });
   }
 
+  function hasUploadedWeapon(weapon) {
+    return Boolean(
+      catalog.camoAssets &&
+        catalog.camoAssets.weapons &&
+        catalog.camoAssets.weapons[String(weapon || '').toUpperCase()]
+    );
+  }
+
+  function hasUploadedCamo(camoId) {
+    return Boolean(
+      catalog.camoAssets &&
+        catalog.camoAssets.camos &&
+        catalog.camoAssets.camos[String(camoId || '').toLowerCase()]
+    );
+  }
+
   function weaponThumbSrc(weapon) {
+    if (hasUploadedWeapon(weapon)) {
+      return (
+        '/api/store-asset?type=weapon&id=' +
+        encodeURIComponent(String(weapon || '').toUpperCase()) +
+        '&v=' +
+        (catalog.camoAssets.weapons[String(weapon || '').toUpperCase()].updatedAt || '')
+      );
+    }
     var cat = getCamoCatalog();
     if (cat.weaponImage) return cat.weaponImage(weapon);
     return (cat.weaponImageBase || 'assets/images/weapons/') + weapon + '.png';
+  }
+
+  function camoPatternSrc(camoId) {
+    if (hasUploadedCamo(camoId)) {
+      return (
+        '/api/store-asset?type=camo&id=' +
+        encodeURIComponent(String(camoId || '').toLowerCase()) +
+        '&v=' +
+        (catalog.camoAssets.camos[String(camoId || '').toLowerCase()].updatedAt || '')
+      );
+    }
+    var cat = getCamoCatalog();
+    if (cat.camoImage) return cat.camoImage(camoId);
+    return (cat.camoImageBase || 'assets/images/camos/') + camoId + '.png';
   }
 
   function camoThumbStyle(camo) {
@@ -268,8 +313,7 @@
   }
 
   function camoThumbHtml(camo) {
-    var cat = getCamoCatalog();
-    var img = cat.camoImage ? cat.camoImage(camo.camoId) : (cat.camoImageBase || '') + camo.camoId + '.png';
+    var img = camoPatternSrc(camo.camoId);
     return (
       '<span class="store-camo-tile-thumb">' +
       '<span class="store-camo-tile-thumb-inner" style="' +
@@ -353,7 +397,7 @@
 
     if (camo) {
       var cat = getCamoCatalog();
-      var camoImg = cat.camoImage ? cat.camoImage(camo.camoId) : '';
+      var camoImg = hasUploadedCamo(camo.camoId) ? camoPatternSrc(camo.camoId) : cat.camoImage ? cat.camoImage(camo.camoId) : '';
       var bg = camo.css || 'linear-gradient(135deg,#666,#999)';
       camoOnWeapon.hidden = false;
       camoOnWeapon.style.background = bg;
@@ -389,7 +433,9 @@
       if (usingFallback) {
         camoMissingHint.hidden = false;
         camoMissingHint.textContent =
-          'PNG ontbreekt: ' + weapon + '.png — voorbeeld-silhouet. Upload naar assets/images/weapons/ + redeploy.';
+          'Geen PNG voor ' +
+          weapon +
+          ' — upload in admin → Camo PNG\'s (sleep bestand van je PC).';
       } else {
         camoMissingHint.hidden = true;
       }
@@ -1233,6 +1279,7 @@
       if (full || !catalog.categories.length) {
         catalog.categories = data.categories || catalog.categories;
         catalog.products = data.products || catalog.products;
+        catalog.camoAssets = data.camoAssets || catalog.camoAssets || { weapons: {}, camos: {} };
         renderCategoryTabs();
         renderProducts();
       }

@@ -4,6 +4,12 @@ const { requireAdmin } = require('../store/session');
 const { saveState, getState, loadCatalogBackup, writeCatalogBackup } = require('../store/blob-store');
 const { findUser } = require('../store/auth-sessions');
 const { logStoreAdminAction } = require('../store/discord-webhooks');
+const {
+  uploadWeaponImage,
+  deleteWeaponImage,
+  publicCamoAssets,
+  weaponIdFromFilename,
+} = require('../store/camo-assets');
 
 function slugify(s) {
   return String(s)
@@ -85,6 +91,7 @@ module.exports = async function handler(req, res) {
       return json(res, 200, {
         categories: state.categories,
         products: state.products,
+        camoAssets: publicCamoAssets(state),
         users: Object.values(state.users)
           .map(mapUserForAdmin)
           .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)),
@@ -158,7 +165,7 @@ module.exports = async function handler(req, res) {
 
     let result = { ok: true };
 
-    await saveState((state) => {
+    await saveState(async (state) => {
       switch (action) {
         case 'category-save': {
           const { id, name, sort } = body;
@@ -298,6 +305,45 @@ module.exports = async function handler(req, res) {
           order.note = 'requeued_by_admin';
           delete order.completedAt;
           result.order = order;
+          break;
+        }
+        case 'camo-weapon-upload': {
+          const { weapon, imageBase64 } = body;
+          if (!weapon || !imageBase64) throw new Error('weapon en imageBase64 verplicht');
+          const buffer = Buffer.from(String(imageBase64), 'base64');
+          const uploaded = await uploadWeaponImage(state, weapon, buffer);
+          result.weaponId = uploaded.weaponId;
+          result.camoAssets = publicCamoAssets(state);
+          break;
+        }
+        case 'camo-weapons-bulk-upload': {
+          const files = body.files;
+          if (!Array.isArray(files) || !files.length) throw new Error('files array verplicht');
+          const uploaded = [];
+          const skipped = [];
+          for (const file of files) {
+            const weaponId = weaponIdFromFilename(file.name) || (file.weapon ? String(file.weapon) : null);
+            if (!weaponId || !file.imageBase64) {
+              skipped.push(file.name || file.weapon || 'onbekend');
+              continue;
+            }
+            try {
+              const buffer = Buffer.from(String(file.imageBase64), 'base64');
+              const row = await uploadWeaponImage(state, weaponId, buffer);
+              uploaded.push(row.weaponId);
+            } catch (err) {
+              skipped.push((file.name || weaponId) + ': ' + err.message);
+            }
+          }
+          result.uploaded = uploaded;
+          result.skipped = skipped;
+          result.camoAssets = publicCamoAssets(state);
+          break;
+        }
+        case 'camo-weapon-delete': {
+          const deleted = await deleteWeaponImage(state, body.weapon);
+          result.deleted = deleted;
+          result.camoAssets = publicCamoAssets(state);
           break;
         }
         default:

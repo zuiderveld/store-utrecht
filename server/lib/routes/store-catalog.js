@@ -1,5 +1,6 @@
 const { cors, json } = require('../store/http');
 const { getState } = require('../store/blob-store');
+const { publicCamoAssets } = require('../store/camo-assets');
 const { resolveAuth, buildMe } = require('../store/session');
 
 function maskUsername(name) {
@@ -80,7 +81,7 @@ module.exports = async function handler(req, res) {
       me = { ...buildMe(ctx), accessToken: ctx.accessToken };
     }
 
-    return json(res, 200, { categories, products, me, topBuyer, recentPurchases });
+    return json(res, 200, { categories, products, me, topBuyer, recentPurchases, camoAssets: publicCamoAssets(state) });
   } catch (err) {
     console.error('store:', err);
     return json(res, 500, { error: err.message || 'Store laden mislukt' });

@@ -1,7 +1,8 @@
 /**
  * URP Camo Editor — wapens + skins (statisch)
- * PNG's: assets/images/weapons/WEAPON_XXX.png
- * Camo PNG's (optioneel): assets/images/camos/{camoId}.png
+ * Wapen PNG's: upload via admin → tab "Camo PNG's" (van je PC, geen URL)
+ * Optioneel lokaal in repo: assets/images/weapons/WEAPON_XXX.png
+ * Camo PNG's (optioneel): admin upload of assets/images/camos/{camoId}.png
  */
 window.URP_CAMO_CATALOG = {
   weaponImageBase: 'assets/images/weapons/',

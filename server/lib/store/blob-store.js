@@ -36,6 +36,7 @@ const DEFAULT_STATE = {
   authSessions: {},
   emailIndex: {},
   orders: [],
+  camoAssets: { weapons: {}, camos: {} },
 };
 
 async function streamToText(stream) {
@@ -58,6 +59,13 @@ function normalizeState(raw) {
     authSessions: raw.authSessions || {},
     emailIndex: raw.emailIndex || {},
     orders: raw.orders || [],
+    camoAssets:
+      raw.camoAssets && typeof raw.camoAssets === 'object'
+        ? {
+            weapons: raw.camoAssets.weapons && typeof raw.camoAssets.weapons === 'object' ? raw.camoAssets.weapons : {},
+            camos: raw.camoAssets.camos && typeof raw.camoAssets.camos === 'object' ? raw.camoAssets.camos : {},
+          }
+        : { weapons: {}, camos: {} },
   };
 }
 
