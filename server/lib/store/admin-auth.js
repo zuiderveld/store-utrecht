@@ -83,14 +83,16 @@ function createAdminSessionToken() {
   return ADMIN_PREFIX + crypto.randomBytes(24).toString('hex');
 }
 
-async function createAdminSession(username) {
+async function createAdminSession(username, loginMethod) {
   const token = createAdminSessionToken();
   const displayName = resolveAdminUsername(username) || getConfiguredAdminUser();
+  const method = loginMethod === 'discord' ? 'discord' : 'admin-password';
 
   await saveState((state) => {
     if (!state.adminSessions) state.adminSessions = {};
     state.adminSessions[token] = {
       username: displayName,
+      loginMethod: method,
       expiresAt: Date.now() + ADMIN_TTL_MS,
       createdAt: Date.now(),
     };
@@ -115,7 +117,11 @@ async function resolveAdminSession(token) {
     return null;
   }
 
-  return { username: entry.username, token };
+  return {
+    username: entry.username,
+    token,
+    loginMethod: entry.loginMethod || 'admin-password',
+  };
 }
 
 async function revokeAdminSession(token) {

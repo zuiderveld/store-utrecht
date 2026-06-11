@@ -3,9 +3,9 @@ const path = require('path');
 const { cors, json } = require('../store/http');
 const { readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
-const { blobAccess } = require('../store/blob-store');
+const { readBlobAt, blobPutOptions, blobToken } = require('../store/blob-store');
 const { logStoreMaintenance } = require('../store/discord-webhooks');
-const { get, put } = require('@vercel/blob');
+const { put } = require('@vercel/blob');
 
 const DEFAULT_STATE = {
   global: false,
@@ -25,35 +25,21 @@ function readDefaultFile() {
 }
 
 async function loadFromBlob() {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
-  try {
-    const result = await get(BLOB_PATHNAME, {
-      access: blobAccess(),
-      useCache: false,
-    });
-    if (!result?.stream) return null;
-    const text = await new Response(result.stream).text();
-    if (!text) return null;
-    return JSON.parse(text);
-  } catch {
-    /* geen blob */
-  }
+  const read = await readBlobAt(BLOB_PATHNAME);
+  if (read.ok && read.data) return read.data;
   return null;
 }
 
 async function saveToBlob(state) {
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!blobToken) {
+  const token = blobToken();
+  if (!token) {
     throw new Error('Vercel Blob vereist (BLOB_READ_WRITE_TOKEN) om onderhoud op te slaan.');
   }
-  await put(BLOB_PATHNAME, JSON.stringify(state), {
-    access: blobAccess(),
-    token: blobToken,
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: 'application/json',
-    cacheControlMaxAge: 60,
-  });
+  await put(
+    BLOB_PATHNAME,
+    JSON.stringify(state),
+    blobPutOptions({ contentType: 'application/json', cacheControlMaxAge: 60 })
+  );
 }
 
 async function getMaintenanceState() {

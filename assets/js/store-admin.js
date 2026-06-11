@@ -1325,15 +1325,31 @@
       });
       if (!cfg.passwordConfigured) {
         setGateHint(
-          'Geen admin accounts — zet STORE_ADMIN_USERS of STORE_ADMIN_PASSWORD in Vercel en redeploy.'
+          'Geen wachtwoord-accounts — je kunt nog wel inloggen met Discord (rol Store Beheer). ' +
+            'Optioneel: STORE_ADMIN_USERS in Vercel.'
         );
       } else if (cfg.multiUser) {
-        setGateHint(
-          'Meerdere beheerders: log in met jouw eigen gebruikersnaam en wachtwoord.'
-        );
+        setGateHint('Meerdere beheerders: log in met Discord of jouw eigen gebruikersnaam + wachtwoord.');
       }
     } catch (e) {
       /* config optioneel */
+    }
+
+    try {
+      var blobCheck = await fetch(window.STORE_CONFIG.apiBase + '/api/health?blob=1', { cache: 'no-store' });
+      var blobInfo = await blobCheck.json().catch(function () {
+        return {};
+      });
+      if (blobInfo.blob && blobInfo.blob.tokenConfigured && blobInfo.blob.exists && !blobInfo.blob.readable) {
+        setGateHint(
+          'Blob-database niet leesbaar — zet BLOB_READ_WRITE_TOKEN (store-project) en BLOB_ACCESS=private in Vercel. ' +
+            'Sla niets op tot /api/health?blob=1 readable:true toont.'
+        );
+      } else if (blobInfo.blob && !blobInfo.blob.tokenConfigured) {
+        setGateHint('Zet BLOB_READ_WRITE_TOKEN in Vercel zodat producten en orders bewaard blijven.');
+      }
+    } catch (e) {
+      /* blob check optioneel */
     }
 
     if (isAdminLoggedIn() && (await verifyAdminSession())) {

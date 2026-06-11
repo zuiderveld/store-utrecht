@@ -10,6 +10,22 @@ function blobAccess() {
   return mode === 'public' ? 'public' : 'private';
 }
 
+function blobToken() {
+  return process.env.BLOB_READ_WRITE_TOKEN || '';
+}
+
+function blobPutOptions(extra = {}) {
+  const token = blobToken();
+  const opts = {
+    access: blobAccess(),
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    ...extra,
+  };
+  if (token) opts.token = token;
+  return opts;
+}
+
 const DEFAULT_STATE = {
   version: 1,
   categories: [
@@ -73,10 +89,11 @@ function normalizeState(raw) {
   };
 }
 
-async function blobFileExists() {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return false;
+async function blobFileExists(path) {
+  const token = blobToken();
+  if (!token) return false;
   try {
-    await head(BLOB_PATH, { token: process.env.BLOB_READ_WRITE_TOKEN });
+    await head(path, { token });
     return true;
   } catch {
     return false;
@@ -84,9 +101,27 @@ async function blobFileExists() {
 }
 
 async function readBlobAt(path) {
+  const token = blobToken();
+  if (!token) return { ok: false, reason: 'no-token' };
+
+  try {
+    const meta = await head(path, { token });
+    if (meta?.url) {
+      const res = await fetch(meta.url, { cache: 'no-store' });
+      if (res.ok) {
+        const text = await res.text();
+        if (!text) return { ok: false, reason: 'empty' };
+        return { ok: true, data: JSON.parse(text) };
+      }
+    }
+  } catch (err) {
+    console.warn('[urp-store] head+fetch mislukt (' + path + '):', err.message);
+  }
+
   try {
     const result = await get(path, {
       access: blobAccess(),
+      token,
       useCache: false,
     });
     if (!result?.stream) return { ok: false, reason: 'empty' };
@@ -104,31 +139,28 @@ async function readBlob() {
 }
 
 async function writeBlob(state) {
-  await put(BLOB_PATH, JSON.stringify(state), {
-    access: blobAccess(),
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    contentType: 'application/json',
-  });
+  const token = blobToken();
+  if (!token) throw new Error('BLOB_READ_WRITE_TOKEN ontbreekt — kan niet opslaan.');
+  await put(BLOB_PATH, JSON.stringify(state), blobPutOptions({ contentType: 'application/json' }));
 }
 
 async function writeBackup(state) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
+  const token = blobToken();
+  if (!token) return;
   try {
-    await put(BLOB_BACKUP_PATH, JSON.stringify(state), {
-      access: blobAccess(),
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: 'application/json',
-      cacheControlMaxAge: 60,
-    });
+    await put(
+      BLOB_BACKUP_PATH,
+      JSON.stringify(state),
+      blobPutOptions({ contentType: 'application/json', cacheControlMaxAge: 60 })
+    );
   } catch (err) {
     console.warn('[urp-store] backup mislukt:', err.message);
   }
 }
 
 async function writeCatalogBackup(state) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  const token = blobToken();
+  if (!token) return null;
   const payload = {
     version: 1,
     savedAt: new Date().toISOString(),
@@ -136,13 +168,11 @@ async function writeCatalogBackup(state) {
     products: Array.isArray(state.products) ? state.products : [],
   };
   try {
-    await put(BLOB_CATALOG_BACKUP_PATH, JSON.stringify(payload), {
-      access: blobAccess(),
-      addRandomSuffix: false,
-      allowOverwrite: true,
-      contentType: 'application/json',
-      cacheControlMaxAge: 60,
-    });
+    await put(
+      BLOB_CATALOG_BACKUP_PATH,
+      JSON.stringify(payload),
+      blobPutOptions({ contentType: 'application/json', cacheControlMaxAge: 60 })
+    );
     return payload;
   } catch (err) {
     console.warn('[urp-store] catalog backup mislukt:', err.message);
@@ -170,12 +200,12 @@ async function getState() {
     return normalizeState(read.data);
   }
 
-  const exists = await blobFileExists();
+  const exists = await blobFileExists(BLOB_PATH);
 
   if (exists) {
     throw new Error(
       'Store database kon niet worden gelezen (Blob bestaat wel). ' +
-        'Controleer BLOB_READ_WRITE_TOKEN en BLOB_ACCESS=private — sla niets op tot dit werkt, anders risico op dataverlies.'
+        'Controleer BLOB_READ_WRITE_TOKEN (zelfde store-project) en BLOB_ACCESS=private — sla niets op tot dit werkt, anders risico op dataverlies.'
     );
   }
 
@@ -202,13 +232,35 @@ async function saveState(mutator) {
   return next;
 }
 
+async function getBlobDiagnostics() {
+  const tokenConfigured = Boolean(blobToken());
+  const exists = tokenConfigured ? await blobFileExists(BLOB_PATH) : false;
+  let readable = false;
+  if (exists) {
+    const read = await readBlob();
+    readable = read.ok;
+  }
+  return {
+    tokenConfigured,
+    blobAccess: blobAccess(),
+    path: BLOB_PATH,
+    exists,
+    readable,
+  };
+}
+
 module.exports = {
   getState,
   saveState,
   loadCatalogBackup,
   writeCatalogBackup,
+  getBlobDiagnostics,
   DEFAULT_STATE,
   BLOB_PATH,
   BLOB_CATALOG_BACKUP_PATH,
   blobAccess,
+  blobToken,
+  blobPutOptions,
+  readBlobAt,
+  blobFileExists,
 };

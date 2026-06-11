@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      const accessToken = await createAdminSession(discord.username);
+      const accessToken = await createAdminSession(discord.username, 'discord');
       logStoreAdminLogin({ username: discord.username, method: 'discord' });
       return json(res, 200, {
         ok: true,
@@ -92,7 +92,7 @@ module.exports = async function handler(req, res) {
       return json(res, 200, {
         ok: true,
         username: session.username,
-        loginMethod: 'admin-password',
+        loginMethod: session.loginMethod || 'admin-password',
       });
     }
 
@@ -115,7 +115,7 @@ module.exports = async function handler(req, res) {
 
     return json(res, 400, {
       error: 'Onbekende actie',
-      actions: ['login', 'logout', 'me', 'config'],
+      actions: ['login', 'discord-login', 'logout', 'me', 'config'],
     });
   } catch (err) {
     console.error('store-admin-auth:', err);
