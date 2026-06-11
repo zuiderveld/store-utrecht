@@ -4,8 +4,11 @@ const { cors, json } = require('../store/http');
 const { readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
 const { readBlobAt, blobPutOptions, hasBlobCredentials } = require('../store/blob-store');
+const { resolveStorageMode } = require('../store/state-store');
 const { logStoreMaintenance } = require('../store/discord-webhooks');
 const { put } = require('@vercel/blob');
+
+const MAINT_FILE = path.join(process.cwd(), 'data', 'maintenance-live.json');
 
 const DEFAULT_STATE = {
   global: false,
@@ -22,6 +25,19 @@ function readDefaultFile() {
   } catch {
     return { ...DEFAULT_STATE };
   }
+}
+
+async function loadFromFile() {
+  try {
+    return JSON.parse(fs.readFileSync(MAINT_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+async function saveToFile(state) {
+  fs.mkdirSync(path.dirname(MAINT_FILE), { recursive: true });
+  fs.writeFileSync(MAINT_FILE, JSON.stringify(state), 'utf8');
 }
 
 async function loadFromBlob() {
@@ -41,16 +57,35 @@ async function saveToBlob(state) {
   );
 }
 
+async function saveMaintenance(state) {
+  const mode = resolveStorageMode();
+  if (mode === 'file') {
+    await saveToFile(state);
+    return 'file';
+  }
+  if (mode === 'memory') {
+    await saveToFile(state);
+    return 'memory';
+  }
+  await saveToBlob(state);
+  return 'blob';
+}
+
 async function getMaintenanceState() {
   if (process.env.MAINTENANCE_FORCE_OFF === 'true') {
     return { ...readDefaultFile(), global: false, _storage: 'force-off' };
+  }
+  const mode = resolveStorageMode();
+  if (mode === 'file' || mode === 'memory') {
+    const fromFile = await loadFromFile();
+    if (fromFile) return { ...fromFile, _storage: mode };
   }
   const fromBlob = await loadFromBlob();
   if (fromBlob) return { ...fromBlob, _storage: 'blob' };
   const base = { ...readDefaultFile() };
   return {
     ...base,
-    _storage: hasBlobCredentials() ? 'blob-empty' : 'default',
+    _storage: mode === 'blob' && hasBlobCredentials() ? 'blob-empty' : mode,
     _blobConfigured: hasBlobCredentials(),
   };
 }
@@ -86,13 +121,13 @@ module.exports = async function handler(req, res) {
       const adminCtx = await requireAdmin(req.headers.authorization);
       const body = await readBody(req);
       const state = normalizeState(body.maintenance || {});
-      await saveToBlob(state);
+      const storage = await saveMaintenance(state);
       logStoreMaintenance({
         admin: adminCtx.username,
         global: state.global,
         message: state.message,
       });
-      return json(res, 200, { ok: true, maintenance: { ...state, _storage: 'blob' } });
+      return json(res, 200, { ok: true, maintenance: { ...state, _storage: storage } });
     } catch (err) {
       const code = /beheer|admin|token|log/i.test(err.message) ? 403 : 500;
       return json(res, code, { error: err.message || 'Opslaan mislukt' });

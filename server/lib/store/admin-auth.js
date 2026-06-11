@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { saveState, getState } = require('./blob-store');
+const { saveState, getState } = require('./state-store');
 
 const ADMIN_PREFIX = 'urp_admin_';
 const ADMIN_TTL_MS = 12 * 60 * 60 * 1000;

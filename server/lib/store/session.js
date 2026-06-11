@@ -1,7 +1,7 @@
 const { verifyStoreMember, verifyStoreMemberByDiscordId } = require('./discord-store');
 const { requireAdminAuth } = require('./admin-auth');
 
-const { getState, saveState } = require('./blob-store');
+const { getState, saveState } = require('./state-store');
 
 const {
 

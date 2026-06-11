@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { cors, json, readBody } = require('../store/http');
-const { saveState, getState } = require('../store/blob-store');
+const { saveState, getState } = require('../store/state-store');
 const { hashPassword, verifyPassword, normalizeEmail, isValidEmail } = require('../store/password');
 const { createSession, userPayload } = require('../store/auth-sessions');
 

@@ -4,7 +4,8 @@
   "description": "Utrecht Roleplay — aparte coin store (website + API + FiveM bridge)",
   "scripts": {
     "build": "node scripts/vercel-prep.js",
-    "vercel-prep": "node scripts/vercel-prep.js"
+    "vercel-prep": "node scripts/vercel-prep.js",
+    "local-api": "node scripts/local-api.js"
   },
   "dependencies": {
     "@vercel/blob": "^2.4.0"

@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { cors, json, readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
-const { saveState, getState, loadCatalogBackup, writeCatalogBackup } = require('../store/blob-store');
+const { saveState, getState, loadCatalogBackup, writeCatalogBackup } = require('../store/state-store');
 const { findUser } = require('../store/auth-sessions');
 const { logStoreAdminAction } = require('../store/discord-webhooks');
 const {

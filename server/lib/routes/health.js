@@ -1,5 +1,5 @@
 const { cors, json } = require('../store/http');
-const { getBlobDiagnostics } = require('../store/blob-store');
+const { getStorageDiagnostics } = require('../store/state-store');
 
 module.exports = async function handler(req, res) {
   cors(res);
@@ -14,7 +14,8 @@ module.exports = async function handler(req, res) {
 
   if (req.query?.blob === '1' || req.query?.verbose === '1') {
     try {
-      body.blob = await getBlobDiagnostics();
+      body.storage = await getStorageDiagnostics();
+      body.blob = body.storage;
     } catch (err) {
       body.blob = { error: err.message || 'blob check mislukt' };
     }

@@ -1,7 +1,7 @@
 const { cors, json, readBody } = require('../store/http');
 const { requireAuth } = require('../store/session');
 const { createLinkCode } = require('../store/discord-store');
-const { saveState } = require('../store/blob-store');
+const { saveState } = require('../store/state-store');
 
 const CODE_TTL_MS = 10 * 60 * 1000;
 

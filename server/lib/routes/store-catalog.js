@@ -1,5 +1,5 @@
 const { cors, json } = require('../store/http');
-const { getState } = require('../store/blob-store');
+const { getState } = require('../store/state-store');
 const { publicCamoAssets } = require('../store/camo-assets');
 const { resolveAuth, buildMe } = require('../store/session');
 

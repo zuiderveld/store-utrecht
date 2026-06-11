@@ -1,5 +1,5 @@
 const { cors, json, readBody, checkBridgeKey } = require('../store/http');
-const { saveState, getState } = require('../store/blob-store');
+const { saveState, getState } = require('../store/state-store');
 const { findUserByLicense, findUserInState, purchaseOne, purchaseCart, mergeOrderMeta, normalizeProductIds } = require('../store/purchase-core');
 const { processPendingDiscordRoleOrders, purchaseMessageForOrder, isDiscordRoleOrder } = require('../store/discord-role-fulfill');
 const { getMaintenanceState, assertStoreOpen } = require('./store-maintenance');

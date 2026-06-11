@@ -1,7 +1,7 @@
 const { cors, json, readBody } = require('../store/http');
 const { exchangeCode, verifyStoreMember, verifyStoreMemberByDiscordId, getAdminDiagnostics } = require('../store/discord-store');
 const { upsertDiscordUser, linkDiscordToEmailUser, buildMe } = require('../store/session');
-const { getState, saveState } = require('../store/blob-store');
+const { getState, saveState } = require('../store/state-store');
 const {
   findUser,
   findUserByDiscordId,

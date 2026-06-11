@@ -1,5 +1,5 @@
 const { cors } = require('../store/http');
-const { getState } = require('../store/blob-store');
+const { getState } = require('../store/state-store');
 const {
   hasWeaponAsset,
   hasCamoAsset,
