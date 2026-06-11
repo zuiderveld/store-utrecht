@@ -1,4 +1,4 @@
-const { get, put, head } = require('@vercel/blob');
+const { get, put, head, list } = require('@vercel/blob');
 
 const BLOB_PATH = 'store/state.json';
 const BLOB_BACKUP_PATH = 'store/state-backup.json';
@@ -100,37 +100,112 @@ async function blobFileExists(path) {
   }
 }
 
-async function readBlobAt(path) {
+function blobAccessModes() {
+  const preferred = blobAccess();
+  const other = preferred === 'private' ? 'public' : 'private';
+  return preferred === other ? [preferred] : [preferred, other];
+}
+
+function parseBlobJson(text, path) {
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error('Ongeldige JSON in blob ' + path + ': ' + (err.message || 'parse error'));
+  }
+}
+
+async function fetchBlobUrl(url, token) {
+  if (!url) return null;
+  const attempts = [
+    { headers: { Authorization: 'Bearer ' + token } },
+    { headers: {} },
+  ];
+  for (const opts of attempts) {
+    try {
+      const res = await fetch(url, { cache: 'no-store', ...opts });
+      if (res.ok) {
+        const text = await res.text();
+        return text || null;
+      }
+    } catch {
+      /* volgende poging */
+    }
+  }
+  return null;
+}
+
+async function readBlobTextAt(path) {
   const token = blobToken();
   if (!token) return { ok: false, reason: 'no-token' };
 
-  try {
-    const meta = await head(path, { token });
-    if (meta?.url) {
-      const res = await fetch(meta.url, { cache: 'no-store' });
-      if (res.ok) {
-        const text = await res.text();
-        if (!text) return { ok: false, reason: 'empty' };
-        return { ok: true, data: JSON.parse(text) };
+  const attempts = [];
+
+  for (const access of blobAccessModes()) {
+    try {
+      const result = await get(path, {
+        access,
+        token,
+        useCache: false,
+      });
+      if (result?.stream) {
+        const text = await streamToText(result.stream);
+        if (text) {
+          return { ok: true, text, accessUsed: access, method: 'get' };
+        }
+        attempts.push({ method: 'get', access, error: 'empty stream' });
+      } else {
+        attempts.push({ method: 'get', access, error: 'not found' });
       }
+    } catch (err) {
+      attempts.push({ method: 'get', access, error: err.message || String(err) });
     }
-  } catch (err) {
-    console.warn('[urp-store] head+fetch mislukt (' + path + '):', err.message);
   }
 
   try {
-    const result = await get(path, {
-      access: blobAccess(),
-      token,
-      useCache: false,
-    });
-    if (!result?.stream) return { ok: false, reason: 'empty' };
-    const text = await streamToText(result.stream);
-    if (!text) return { ok: false, reason: 'empty' };
-    return { ok: true, data: JSON.parse(text) };
+    const meta = await head(path, { token });
+    const urls = [meta?.downloadUrl, meta?.url].filter(Boolean);
+    for (const url of urls) {
+      const text = await fetchBlobUrl(url, token);
+      if (text) {
+        return { ok: true, text, accessUsed: 'head-url', method: 'head-fetch' };
+      }
+      attempts.push({ method: 'head-fetch', url: url.slice(0, 48) + '…', error: 'fetch failed' });
+    }
   } catch (err) {
-    console.error('[urp-store] readBlobAt mislukt (' + path + '):', err.message);
-    return { ok: false, reason: 'error', error: err };
+    attempts.push({ method: 'head', error: err.message || String(err) });
+  }
+
+  try {
+    const { blobs } = await list({ prefix: path, token, limit: 5 });
+    const match =
+      blobs.find((b) => b.pathname === path) ||
+      blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+    if (match?.url) {
+      const text = await fetchBlobUrl(match.downloadUrl || match.url, token);
+      if (text) {
+        return { ok: true, text, accessUsed: 'list-url', method: 'list-fetch' };
+      }
+      attempts.push({ method: 'list-fetch', error: 'fetch failed' });
+    }
+  } catch (err) {
+    attempts.push({ method: 'list', error: err.message || String(err) });
+  }
+
+  return { ok: false, reason: 'error', attempts };
+}
+
+async function readBlobAt(path) {
+  const read = await readBlobTextAt(path);
+  if (!read.ok) return read;
+  try {
+    return {
+      ok: true,
+      data: parseBlobJson(read.text, path),
+      accessUsed: read.accessUsed,
+      method: read.method,
+    };
+  } catch (err) {
+    return { ok: false, reason: 'error', error: err, attempts: read.attempts || [] };
   }
 }
 
@@ -200,18 +275,42 @@ async function getState() {
     return normalizeState(read.data);
   }
 
+  for (const backupPath of [BLOB_BACKUP_PATH]) {
+    const backup = await readBlobAt(backupPath);
+    if (backup.ok && backup.data) {
+      console.warn('[urp-store] Hoofd-blob onleesbaar — hersteld vanuit backup:', backupPath);
+      const state = normalizeState(backup.data);
+      try {
+        await writeBlob(state);
+      } catch (err) {
+        console.warn('[urp-store] Auto-repair write mislukt:', err.message);
+      }
+      return state;
+    }
+  }
+
   const exists = await blobFileExists(BLOB_PATH);
 
   if (exists) {
+    const detail = read.attempts?.length
+      ? ' Laatste pogingen: ' +
+        read.attempts
+          .slice(0, 4)
+          .map((a) => (a.method || 'get') + (a.access ? '/' + a.access : '') + '=' + a.error)
+          .join('; ')
+      : read.error?.message
+        ? ' (' + read.error.message + ')'
+        : '';
     throw new Error(
-      'Store database kon niet worden gelezen (Blob bestaat wel). ' +
-        'Controleer BLOB_READ_WRITE_TOKEN (zelfde store-project) en BLOB_ACCESS=private — sla niets op tot dit werkt, anders risico op dataverlies.'
+      'Store database kon niet worden gelezen (Blob bestaat wel).' +
+        detail +
+        ' — controleer BLOB_READ_WRITE_TOKEN (store-project, niet staff) en probeer BLOB_ACCESS=public of private. Sla niets op tot /api/health?blob=1 readable:true toont.'
     );
   }
 
   if (read.reason === 'error') {
     throw new Error(
-      'Store database kon niet worden gelezen. Controleer BLOB_READ_WRITE_TOKEN en BLOB_ACCESS=private.'
+      'Store database kon niet worden gelezen. Controleer BLOB_READ_WRITE_TOKEN en BLOB_ACCESS (private of public).'
     );
   }
 
@@ -235,17 +334,26 @@ async function saveState(mutator) {
 async function getBlobDiagnostics() {
   const tokenConfigured = Boolean(blobToken());
   const exists = tokenConfigured ? await blobFileExists(BLOB_PATH) : false;
-  let readable = false;
-  if (exists) {
-    const read = await readBlob();
-    readable = read.ok;
-  }
+  const read = exists ? await readBlob() : null;
+  const readable = Boolean(read?.ok);
   return {
     tokenConfigured,
     blobAccess: blobAccess(),
+    blobAccessTried: blobAccessModes(),
     path: BLOB_PATH,
     exists,
     readable,
+    readMethod: read?.method || null,
+    readAccess: read?.accessUsed || null,
+    attempts: read?.ok ? undefined : read?.attempts || [],
+    parseError: read?.error?.message || null,
+    hint: readable
+      ? null
+      : exists
+        ? 'Blob staat waarschijnlijk op andere access (public/private). Zet BLOB_ACCESS=public in Vercel, redeploy, test opnieuw. Token moet uit het store-Vercel-project komen (Storage → Blob).'
+        : tokenConfigured
+          ? 'Geen store/state.json gevonden — eerste save maakt deze aan.'
+          : 'Zet BLOB_READ_WRITE_TOKEN in Vercel (store-project → Storage → Blob).',
   };
 }
 
