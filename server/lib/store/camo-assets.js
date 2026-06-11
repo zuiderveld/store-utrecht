@@ -1,5 +1,5 @@
 const { get, put, del, head } = require('@vercel/blob');
-const { blobAccess, blobPutOptions, blobToken } = require('./blob-store');
+const { blobPutOptions, blobAuthStrategies, hasBlobCredentials } = require('./blob-store');
 
 const WEAPON_PREFIX = 'store/camo/weapons/';
 const CAMO_PREFIX = 'store/camo/camos/';
@@ -92,15 +92,10 @@ async function streamToBuffer(stream) {
 }
 
 async function putImageBlob(path, buffer, contentType) {
-  const token = blobToken();
-  if (!token) {
+  if (!hasBlobCredentials()) {
     return { path: null, inline: buffer.toString('base64') };
   }
-  await put(
-    path,
-    buffer,
-    blobPutOptions({ contentType: contentType || 'image/png' })
-  );
+  await put(path, buffer, blobPutOptions({ contentType: contentType || 'image/png' }));
   return { path, inline: null };
 }
 
@@ -109,32 +104,42 @@ async function readAssetEntry(entry) {
   if (entry.inline) {
     return { buffer: Buffer.from(entry.inline, 'base64'), contentType: entry.contentType || 'image/png' };
   }
-  const token = blobToken();
-  if (!entry.path || !token) return null;
-  try {
-    const meta = await head(entry.path, { token });
-    if (meta?.url) {
-      const res = await fetch(meta.url, { cache: 'no-store' });
-      if (res.ok) {
-        const buffer = Buffer.from(await res.arrayBuffer());
-        return { buffer, contentType: entry.contentType || res.headers.get('content-type') || 'image/png' };
+  if (!entry.path || !hasBlobCredentials()) return null;
+
+  for (const strategy of blobAuthStrategies()) {
+    try {
+      const meta = await head(entry.path, strategy.options);
+      if (meta?.url && strategy.options.token) {
+        const res = await fetch(meta.url, {
+          cache: 'no-store',
+          headers: { Authorization: 'Bearer ' + strategy.options.token },
+        });
+        if (res.ok) {
+          const buffer = Buffer.from(await res.arrayBuffer());
+          return { buffer, contentType: entry.contentType || res.headers.get('content-type') || 'image/png' };
+        }
+      }
+    } catch {
+      /* fallback get */
+    }
+
+    for (const access of ['private', 'public']) {
+      try {
+        const result = await get(entry.path, {
+          access,
+          useCache: false,
+          ...strategy.options,
+        });
+        if (!result?.stream) continue;
+        const buffer = await streamToBuffer(result.stream);
+        return { buffer, contentType: entry.contentType || result.contentType || 'image/png' };
+      } catch {
+        /* volgende */
       }
     }
-  } catch {
-    /* fallback get */
   }
-  try {
-    const result = await get(entry.path, {
-      access: blobAccess(),
-      token,
-      useCache: false,
-    });
-    if (!result?.stream) return null;
-    const buffer = await streamToBuffer(result.stream);
-    return { buffer, contentType: entry.contentType || result.contentType || 'image/png' };
-  } catch {
-    return null;
-  }
+
+  return null;
 }
 
 async function uploadWeaponImage(state, weaponRaw, buffer) {

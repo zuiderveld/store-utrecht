@@ -10,7 +10,16 @@
 
 **Belangrijk:** upload/deploy altijd met **`package.json`** + **`package-lock.json`** in de root (niet alleen HTML). Anders mist `@vercel/blob` en krijg je `Cannot find module '@vercel/blob'`.
 
-**Blob private store:** als je store op *Private* staat (aanbevolen), gebruik `@vercel/blob` ≥ 2.3 en laat `BLOB_ACCESS` leeg of `private`. Fout *"Cannot use public access on a private store"* betekent dat je oude code deployde — redeploy na `npm install`.
+**Blob private store:** als je store op *Private* staat (aanbevolen), gebruik `@vercel/blob` ≥ 2.3 en laat `BLOB_ACCESS` leeg of `private`.
+
+**403 Forbidden bij lezen:** private blobs op Vercel gebruiken **OIDC**, niet een oude handmatige token.
+
+1. Vercel → **Storage** → Blob store → tab **Projects** → koppel **store-utrecht** project  
+2. In het projectmenu: **Upgrade to OIDC** (indien beschikbaar)  
+3. **Verwijder** handmatig ingevulde `BLOB_READ_WRITE_TOKEN` uit Environment Variables (laat Vercel OIDC + `BLOB_STORE_ID` automatisch zetten)  
+4. Redeploy → test `https://store-utrecht.vercel.app/api/health?blob=1` → `"readable": true`, `"readAuth": "oidc"`
+
+Gebruik **niet** de Blob-token van staff-portaal in het store-project.
 
 ---
 

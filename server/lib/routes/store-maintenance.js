@@ -3,7 +3,7 @@ const path = require('path');
 const { cors, json } = require('../store/http');
 const { readBody } = require('../store/http');
 const { requireAdmin } = require('../store/session');
-const { readBlobAt, blobPutOptions, blobToken } = require('../store/blob-store');
+const { readBlobAt, blobPutOptions, hasBlobCredentials } = require('../store/blob-store');
 const { logStoreMaintenance } = require('../store/discord-webhooks');
 const { put } = require('@vercel/blob');
 
@@ -31,9 +31,8 @@ async function loadFromBlob() {
 }
 
 async function saveToBlob(state) {
-  const token = blobToken();
-  if (!token) {
-    throw new Error('Vercel Blob vereist (BLOB_READ_WRITE_TOKEN) om onderhoud op te slaan.');
+  if (!hasBlobCredentials()) {
+    throw new Error('Vercel Blob vereist — koppel store aan project (OIDC) of zet BLOB_READ_WRITE_TOKEN.');
   }
   await put(
     BLOB_PATHNAME,
@@ -51,8 +50,8 @@ async function getMaintenanceState() {
   const base = { ...readDefaultFile() };
   return {
     ...base,
-    _storage: process.env.BLOB_READ_WRITE_TOKEN ? 'blob-empty' : 'default',
-    _blobConfigured: !!process.env.BLOB_READ_WRITE_TOKEN,
+    _storage: hasBlobCredentials() ? 'blob-empty' : 'default',
+    _blobConfigured: hasBlobCredentials(),
   };
 }
 

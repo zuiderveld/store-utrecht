@@ -14,16 +14,57 @@ function blobToken() {
   return process.env.BLOB_READ_WRITE_TOKEN || '';
 }
 
-function blobPutOptions(extra = {}) {
+function blobStoreIdEnv() {
+  return (process.env.BLOB_STORE_ID || '').trim();
+}
+
+function parseStoreIdFromToken(token) {
+  if (!token) return '';
+  const parts = String(token).split('_');
+  return parts[3] || '';
+}
+
+function isVercelRuntime() {
+  return Boolean(process.env.VERCEL);
+}
+
+function hasOidcBlobAuth() {
+  return isVercelRuntime() && Boolean(blobStoreIdEnv());
+}
+
+function hasBlobCredentials() {
+  return Boolean(blobToken()) || hasOidcBlobAuth();
+}
+
+/** Auth-strategieën — OIDC eerst op Vercel (private store); token als fallback/lokaal. */
+function blobAuthStrategies() {
+  const strategies = [];
+  const storeId = blobStoreIdEnv();
   const token = blobToken();
-  const opts = {
+
+  if (hasOidcBlobAuth()) {
+    strategies.push({ name: 'oidc', options: { storeId } });
+  }
+
+  if (token) {
+    strategies.push({ name: 'token', options: { token } });
+  }
+
+  return strategies;
+}
+
+function blobPutOptions(extra = {}) {
+  const strategy = blobAuthStrategies()[0];
+  if (!strategy) {
+    throw new Error('Geen blob credentials — koppel Blob aan Vercel project of zet BLOB_READ_WRITE_TOKEN.');
+  }
+  return {
     access: blobAccess(),
     addRandomSuffix: false,
     allowOverwrite: true,
+    ...strategy.options,
     ...extra,
   };
-  if (token) opts.token = token;
-  return opts;
 }
 
 const DEFAULT_STATE = {
@@ -90,14 +131,16 @@ function normalizeState(raw) {
 }
 
 async function blobFileExists(path) {
-  const token = blobToken();
-  if (!token) return false;
-  try {
-    await head(path, { token });
-    return true;
-  } catch {
-    return false;
+  if (!hasBlobCredentials()) return false;
+  for (const strategy of blobAuthStrategies()) {
+    try {
+      await head(path, strategy.options);
+      return true;
+    } catch {
+      /* volgende strategie */
+    }
   }
+  return false;
 }
 
 function blobAccessModes() {
@@ -135,60 +178,93 @@ async function fetchBlobUrl(url, token) {
 }
 
 async function readBlobTextAt(path) {
-  const token = blobToken();
-  if (!token) return { ok: false, reason: 'no-token' };
+  if (!hasBlobCredentials()) return { ok: false, reason: 'no-credentials' };
 
   const attempts = [];
 
-  for (const access of blobAccessModes()) {
-    try {
-      const result = await get(path, {
-        access,
-        token,
-        useCache: false,
-      });
-      if (result?.stream) {
-        const text = await streamToText(result.stream);
-        if (text) {
-          return { ok: true, text, accessUsed: access, method: 'get' };
+  for (const strategy of blobAuthStrategies()) {
+    for (const access of blobAccessModes()) {
+      try {
+        const result = await get(path, {
+          access,
+          useCache: false,
+          ...strategy.options,
+        });
+        if (result?.stream) {
+          const text = await streamToText(result.stream);
+          if (text) {
+            return {
+              ok: true,
+              text,
+              accessUsed: access,
+              authUsed: strategy.name,
+              method: 'get',
+            };
+          }
+          attempts.push({ method: 'get', auth: strategy.name, access, error: 'empty stream' });
+        } else {
+          attempts.push({ method: 'get', auth: strategy.name, access, error: 'not found' });
         }
-        attempts.push({ method: 'get', access, error: 'empty stream' });
-      } else {
-        attempts.push({ method: 'get', access, error: 'not found' });
+      } catch (err) {
+        attempts.push({
+          method: 'get',
+          auth: strategy.name,
+          access,
+          error: err.message || String(err),
+        });
+      }
+    }
+
+    try {
+      const meta = await head(path, strategy.options);
+      const urls = [meta?.downloadUrl, meta?.url].filter(Boolean);
+      const bearer =
+        strategy.name === 'token' && strategy.options.token ? strategy.options.token : blobToken();
+      for (const url of urls) {
+        const text = bearer ? await fetchBlobUrl(url, bearer) : null;
+        if (text) {
+          return {
+            ok: true,
+            text,
+            accessUsed: 'head-url',
+            authUsed: strategy.name,
+            method: 'head-fetch',
+          };
+        }
+        attempts.push({
+          method: 'head-fetch',
+          auth: strategy.name,
+          url: url.slice(0, 48) + '…',
+          error: 'fetch failed',
+        });
       }
     } catch (err) {
-      attempts.push({ method: 'get', access, error: err.message || String(err) });
+      attempts.push({ method: 'head', auth: strategy.name, error: err.message || String(err) });
     }
-  }
 
-  try {
-    const meta = await head(path, { token });
-    const urls = [meta?.downloadUrl, meta?.url].filter(Boolean);
-    for (const url of urls) {
-      const text = await fetchBlobUrl(url, token);
-      if (text) {
-        return { ok: true, text, accessUsed: 'head-url', method: 'head-fetch' };
+    if (strategy.options.token) {
+      try {
+        const { blobs } = await list({ prefix: path, token: strategy.options.token, limit: 5 });
+        const match =
+          blobs.find((b) => b.pathname === path) ||
+          blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
+        if (match?.url) {
+          const text = await fetchBlobUrl(match.downloadUrl || match.url, strategy.options.token);
+          if (text) {
+            return {
+              ok: true,
+              text,
+              accessUsed: 'list-url',
+              authUsed: strategy.name,
+              method: 'list-fetch',
+            };
+          }
+          attempts.push({ method: 'list-fetch', auth: strategy.name, error: 'fetch failed' });
+        }
+      } catch (err) {
+        attempts.push({ method: 'list', auth: strategy.name, error: err.message || String(err) });
       }
-      attempts.push({ method: 'head-fetch', url: url.slice(0, 48) + '…', error: 'fetch failed' });
     }
-  } catch (err) {
-    attempts.push({ method: 'head', error: err.message || String(err) });
-  }
-
-  try {
-    const { blobs } = await list({ prefix: path, token, limit: 5 });
-    const match =
-      blobs.find((b) => b.pathname === path) ||
-      blobs.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
-    if (match?.url) {
-      const text = await fetchBlobUrl(match.downloadUrl || match.url, token);
-      if (text) {
-        return { ok: true, text, accessUsed: 'list-url', method: 'list-fetch' };
-      }
-      attempts.push({ method: 'list-fetch', error: 'fetch failed' });
-    }
-  } catch (err) {
-    attempts.push({ method: 'list', error: err.message || String(err) });
   }
 
   return { ok: false, reason: 'error', attempts };
@@ -214,14 +290,16 @@ async function readBlob() {
 }
 
 async function writeBlob(state) {
-  const token = blobToken();
-  if (!token) throw new Error('BLOB_READ_WRITE_TOKEN ontbreekt — kan niet opslaan.');
+  if (!hasBlobCredentials()) {
+    throw new Error(
+      'Geen blob credentials — koppel Blob store aan dit Vercel-project (OIDC) of zet BLOB_READ_WRITE_TOKEN.'
+    );
+  }
   await put(BLOB_PATH, JSON.stringify(state), blobPutOptions({ contentType: 'application/json' }));
 }
 
 async function writeBackup(state) {
-  const token = blobToken();
-  if (!token) return;
+  if (!hasBlobCredentials()) return;
   try {
     await put(
       BLOB_BACKUP_PATH,
@@ -234,8 +312,7 @@ async function writeBackup(state) {
 }
 
 async function writeCatalogBackup(state) {
-  const token = blobToken();
-  if (!token) return null;
+  if (!hasBlobCredentials()) return null;
   const payload = {
     version: 1,
     savedAt: new Date().toISOString(),
@@ -296,7 +373,13 @@ async function getState() {
       ? ' Laatste pogingen: ' +
         read.attempts
           .slice(0, 4)
-          .map((a) => (a.method || 'get') + (a.access ? '/' + a.access : '') + '=' + a.error)
+          .map((a) =>
+            (a.method || 'get') +
+            (a.auth ? '/' + a.auth : '') +
+            (a.access ? '/' + a.access : '') +
+            '=' +
+            a.error
+          )
           .join('; ')
       : read.error?.message
         ? ' (' + read.error.message + ')'
@@ -304,18 +387,18 @@ async function getState() {
     throw new Error(
       'Store database kon niet worden gelezen (Blob bestaat wel).' +
         detail +
-        ' — controleer BLOB_READ_WRITE_TOKEN (store-project, niet staff) en probeer BLOB_ACCESS=public of private. Sla niets op tot /api/health?blob=1 readable:true toont.'
+        ' — op Vercel: koppel Blob store aan project (OIDC), verwijder oude handmatige BLOB_READ_WRITE_TOKEN, redeploy. Test /api/health?blob=1.'
     );
   }
 
-  if (read.reason === 'error') {
+  if (read.reason === 'error' || read.reason === 'no-credentials') {
     throw new Error(
-      'Store database kon niet worden gelezen. Controleer BLOB_READ_WRITE_TOKEN en BLOB_ACCESS (private of public).'
+      'Store database kon niet worden gelezen. Koppel Blob aan Vercel (OIDC + BLOB_STORE_ID) of zet BLOB_READ_WRITE_TOKEN.'
     );
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    console.warn('[urp-store] Geen BLOB_READ_WRITE_TOKEN — alleen demo-data in geheugen');
+  if (!hasBlobCredentials()) {
+    console.warn('[urp-store] Geen blob credentials — alleen demo-data in geheugen');
     return JSON.parse(JSON.stringify(DEFAULT_STATE));
   }
 
@@ -332,12 +415,40 @@ async function saveState(mutator) {
 }
 
 async function getBlobDiagnostics() {
-  const tokenConfigured = Boolean(blobToken());
-  const exists = tokenConfigured ? await blobFileExists(BLOB_PATH) : false;
+  const token = blobToken();
+  const tokenStoreId = parseStoreIdFromToken(token);
+  const envStoreId = blobStoreIdEnv();
+  const storeIdMismatch = Boolean(tokenStoreId && envStoreId && tokenStoreId !== envStoreId);
+  const credentials = hasBlobCredentials();
+  const exists = credentials ? await blobFileExists(BLOB_PATH) : false;
   const read = exists ? await readBlob() : null;
   const readable = Boolean(read?.ok);
+
+  let hint = null;
+  if (readable) {
+    hint = null;
+  } else if (storeIdMismatch) {
+    hint =
+      'BLOB_READ_WRITE_TOKEN hoort bij andere store dan BLOB_STORE_ID. Verwijder de handmatige token in Vercel — laat OIDC van het gekoppelde project werken.';
+  } else if (exists && read?.attempts?.some((a) => String(a.error).includes('403'))) {
+    hint =
+      '403 Forbidden: private blob op Vercel vereist OIDC. Storage → Blob → koppel store aan store-project → Upgrade to OIDC → verwijder handmatige BLOB_READ_WRITE_TOKEN → redeploy.';
+  } else if (!credentials) {
+    hint = 'Koppel Blob store aan het store-Vercel-project (Storage tab) — BLOB_STORE_ID wordt automatisch gezet.';
+  } else if (!exists) {
+    hint = 'Geen store/state.json — eerste succesvolle save maakt deze aan.';
+  } else {
+    hint = 'Lezen mislukt — controleer Blob-koppeling en redeploy.';
+  }
+
   return {
-    tokenConfigured,
+    tokenConfigured: Boolean(token),
+    oidcAvailable: hasOidcBlobAuth(),
+    vercel: isVercelRuntime(),
+    blobStoreId: envStoreId || null,
+    tokenStoreId: tokenStoreId || null,
+    storeIdMismatch,
+    authStrategies: blobAuthStrategies().map((s) => s.name),
     blobAccess: blobAccess(),
     blobAccessTried: blobAccessModes(),
     path: BLOB_PATH,
@@ -345,15 +456,10 @@ async function getBlobDiagnostics() {
     readable,
     readMethod: read?.method || null,
     readAccess: read?.accessUsed || null,
+    readAuth: read?.authUsed || null,
     attempts: read?.ok ? undefined : read?.attempts || [],
     parseError: read?.error?.message || null,
-    hint: readable
-      ? null
-      : exists
-        ? 'Blob staat waarschijnlijk op andere access (public/private). Zet BLOB_ACCESS=public in Vercel, redeploy, test opnieuw. Token moet uit het store-Vercel-project komen (Storage → Blob).'
-        : tokenConfigured
-          ? 'Geen store/state.json gevonden — eerste save maakt deze aan.'
-          : 'Zet BLOB_READ_WRITE_TOKEN in Vercel (store-project → Storage → Blob).',
+    hint,
   };
 }
 
@@ -369,6 +475,8 @@ module.exports = {
   blobAccess,
   blobToken,
   blobPutOptions,
+  blobAuthStrategies,
+  hasBlobCredentials,
   readBlobAt,
   blobFileExists,
 };
